@@ -114,7 +114,7 @@
           LayoutDashboard, Fingerprint, GraduationCap, Receipt, Plane, 
           PhoneCall, ShoppingCart, BookOpen, CreditCard, FolderLock, 
           Settings, Bell, Search, Sun, Moon, Eye, EyeOff, Menu, X,
-          Plus, Check, Download, Upload, Shield, Trash2, Calendar, MapPin, Pencil, Newspaper, ExternalLink, Activity, Globe, Link as LinkIcon
+          Plus, Check, Download, Upload, Shield, Trash2, Calendar, MapPin, Pencil, Newspaper, ExternalLink, Activity, Globe, Link as LinkIcon, Briefcase
         } from 'lucide-react';
 
         // --- CUSTOM HOOKS ---
@@ -179,7 +179,8 @@
             { id: 2, name: 'Google', url: 'https://google.com' },
             { id: 3, name: 'GitHub', url: 'https://github.com' },
             { id: 4, name: 'ChatGPT', url: 'https://chatgpt.com' }
-          ]
+          ],
+          financeSummary: { balance: 45000, income: 60000, expense: 15000 }
         };
 
         // --- GTA STYLE COMPONENTS ---
@@ -312,6 +313,7 @@
             { id: 'dashboard', icon: LayoutDashboard, label: 'DASHBOARD' },
             { id: 'news', icon: Newspaper, label: 'LIVE NEWS' },
             { id: 'links', icon: Globe, label: 'COMMLINKS' },
+            { id: 'jobs', icon: Briefcase, label: 'IT JOBS' },
             { id: 'identity', icon: Fingerprint, label: 'IDENTITY VAULT' },
             { id: 'education', icon: GraduationCap, label: 'EDUCATION' },
             { id: 'finance', icon: Receipt, label: 'FINANCE' },
@@ -336,6 +338,29 @@
             // Quick Links State
             const [isAddingQuickLink, setIsAddingQuickLink] = useState(false);
             const [quickLinkData, setQuickLinkData] = useState({ name: '', url: '' });
+
+            // Financial Summary State
+            const [isEditingFinance, setIsEditingFinance] = useState(false);
+            const [financeForm, setFinanceForm] = useState(appData.financeSummary || { balance: 0, income: 0, expense: 0 });
+
+            // Live Weather State (Tamil Nadu)
+            const [weatherTemp, setWeatherTemp] = useState('28');
+
+            useEffect(() => {
+              const fetchWeather = async () => {
+                try {
+                  // Open-Meteo Free API - Using coordinates for the center of Tamil Nadu
+                  const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=11.1271&longitude=78.6569&current_weather=true');
+                  const data = await res.json();
+                  if (data.current_weather) {
+                    setWeatherTemp(Math.round(data.current_weather.temperature));
+                  }
+                } catch(e) {
+                  console.error('Weather fetch failed', e);
+                }
+              };
+              fetchWeather();
+            }, []);
 
             const handleAddQuickLink = () => {
               if(!quickLinkData.name || !quickLinkData.url) return;
@@ -439,7 +464,7 @@
                       <div className="mt-6 flex flex-wrap gap-3">
                         <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg px-4 py-2 flex items-center gap-2 shadow-lg">
                           <Sun className="w-4 h-4 text-yellow-400" />
-                          <span className="font-bold text-sm">28°C / VICE</span>
+                          <span className="font-bold text-sm">{weatherTemp}°C / TN</span>
                         </div>
                         <div className="bg-black/30 backdrop-blur-md border border-white/20 rounded-lg px-4 py-2 flex items-center gap-2 shadow-lg">
                           <Shield className="w-4 h-4 text-gta-cyan" />
@@ -479,6 +504,69 @@
                     <p className="text-4xl font-gta font-black italic">{pendingTasks}</p>
                     <p className="text-xs font-bold text-gray-400 tracking-wider uppercase mt-1">Active Tasks</p>
                   </div>
+                </WidgetCard>
+
+                {/* --- FINANCIAL OVERVIEW (BANK DETAILS) --- */}
+                <WidgetCard colSpan={4} className="flex flex-col">
+                  <div className="flex justify-between items-center mb-4">
+                     <h3 className="text-lg font-gta font-bold italic tracking-wider flex items-center gap-2">
+                      <CreditCard className="w-5 h-5 text-emerald-400" /> FINANCIAL OVERVIEW
+                    </h3>
+                    {isEditMode && (
+                      <button 
+                        onClick={() => {
+                          setFinanceForm(appData.financeSummary || { balance: 0, income: 0, expense: 0 });
+                          setIsEditingFinance(!isEditingFinance);
+                        }} 
+                        className="text-gta-cyan hover:text-white transition-colors p-1"
+                      >
+                        {isEditingFinance ? <X className="w-5 h-5" /> : <Pencil className="w-4 h-4" />}
+                      </button>
+                    )}
+                  </div>
+
+                  {isEditMode && isEditingFinance ? (
+                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2 animate-fade-in bg-black/40 p-4 rounded-xl border border-white/10 shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)]">
+                       <div>
+                         <label className="text-[10px] text-gray-500 font-bold tracking-widest uppercase mb-2 block">MAIN BALANCE (₹)</label>
+                         <GtaInput type="number" value={financeForm.balance} onChange={e=>setFinanceForm({...financeForm, balance: Number(e.target.value)})} className="w-full" />
+                       </div>
+                       <div>
+                         <label className="text-[10px] text-gray-500 font-bold tracking-widest uppercase mb-2 block">MONTHLY INCOME (₹)</label>
+                         <GtaInput type="number" value={financeForm.income} onChange={e=>setFinanceForm({...financeForm, income: Number(e.target.value)})} className="w-full" />
+                       </div>
+                       <div>
+                         <label className="text-[10px] text-gray-500 font-bold tracking-widest uppercase mb-2 block">MONTHLY EXPENSE (₹)</label>
+                         <GtaInput type="number" value={financeForm.expense} onChange={e=>setFinanceForm({...financeForm, expense: Number(e.target.value)})} className="w-full" />
+                       </div>
+                       <div className="col-span-1 md:col-span-3 flex justify-end mt-2">
+                         <GtaButton onClick={() => { setAppData({...appData, financeSummary: financeForm}); setIsEditingFinance(false); }}>
+                           <Check className="w-4 h-4" /> SAVE OVERVIEW
+                         </GtaButton>
+                       </div>
+                     </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-0 divide-y md:divide-y-0 md:divide-x divide-white/10 mt-2">
+                       <div className="flex flex-col pt-2 md:pt-0 px-2">
+                         <p className="text-xs font-bold text-gray-400 tracking-wider uppercase mb-1 text-center md:text-left">MAIN BALANCE</p>
+                         <p className="text-4xl md:text-5xl font-gta font-black italic text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] text-center md:text-left">
+                           {isPrivacyMode ? maskText(appData.financeSummary?.balance || 0, 'amount') : `₹${(appData.financeSummary?.balance || 0).toLocaleString('en-IN')}`}
+                         </p>
+                       </div>
+                       <div className="flex flex-col pt-4 md:pt-0 px-2 md:pl-8">
+                         <p className="text-xs font-bold text-gray-400 tracking-wider uppercase mb-1 text-center md:text-left">MONTHLY INCOME</p>
+                         <p className="text-3xl font-gta font-black italic text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.4)] text-center md:text-left">
+                           + {isPrivacyMode ? maskText(appData.financeSummary?.income || 0, 'amount') : `₹${(appData.financeSummary?.income || 0).toLocaleString('en-IN')}`}
+                         </p>
+                       </div>
+                       <div className="flex flex-col pt-4 md:pt-0 px-2 md:pl-8">
+                         <p className="text-xs font-bold text-gray-400 tracking-wider uppercase mb-1 text-center md:text-left">MONTHLY EXPENSE</p>
+                         <p className="text-3xl font-gta font-black italic text-gta-pink drop-shadow-[0_0_8px_rgba(255,0,179,0.4)] text-center md:text-left">
+                           - {isPrivacyMode ? maskText(appData.financeSummary?.expense || 0, 'amount') : `₹${(appData.financeSummary?.expense || 0).toLocaleString('en-IN')}`}
+                         </p>
+                       </div>
+                    </div>
+                  )}
                 </WidgetCard>
 
                 {/* Learning Progress Widget */}
@@ -1247,11 +1335,79 @@
             );
           };
 
+          // --- IT JOBS MODULE (ARBEITNOW API) ---
+          const JobsView = () => {
+            const [jobs, setJobs] = useState([]);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+              const fetchJobs = async () => {
+                setLoading(true);
+                try {
+                  const res = await fetch('https://www.arbeitnow.com/api/job-board-api');
+                  const json = await res.json();
+                  if (json && json.data) {
+                     setJobs(json.data.slice(0, 30)); // Display the top 30 recent jobs
+                  }
+                } catch(e) {
+                  console.error("Failed to fetch jobs", e);
+                }
+                setLoading(false);
+              };
+              fetchJobs();
+            }, []);
+
+            return (
+              <div className="space-y-6 animate-fade-in">
+                <h2 className="text-3xl font-gta font-black italic tracking-tighter drop-shadow-[0_2px_10px_rgba(255,255,255,0.1)]">CAREER NETWORK</h2>
+                
+                {loading ? (
+                   <div className="flex flex-col items-center justify-center py-20 text-gta-pink animate-pulse">
+                      <Briefcase className="w-12 h-12 mb-4 drop-shadow-[0_0_10px_rgba(255,0,179,0.8)]" />
+                      <p className="font-gta font-bold italic tracking-widest text-lg">SCANNING JOB MARKET...</p>
+                   </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                    {jobs.map((job, idx) => (
+                      <div key={idx} className="p-5 h-full bg-black/60 border border-white/10 rounded-xl flex flex-col justify-between group hover:border-gta-pink/40 transition-colors shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+                        <div>
+                          <div className="flex justify-between items-start mb-3">
+                            <span className="px-2 py-1 bg-white/10 text-white border border-white/20 text-[10px] font-black italic rounded tracking-widest uppercase truncate max-w-[60%]">
+                              {job.company_name}
+                            </span>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider ${job.remote ? 'text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.5)]' : 'text-gray-500'}`}>
+                              {job.remote ? 'REMOTE' : job.location}
+                            </span>
+                          </div>
+                          <h3 className="text-lg font-bold text-white tracking-wide leading-snug mb-3 group-hover:text-gta-pink transition-colors">
+                             {job.title}
+                          </h3>
+                          <div className="flex flex-wrap gap-1.5 mb-4">
+                            {(job.tags || []).slice(0, 3).map(tag => (
+                               <span key={tag} className="text-[9px] bg-gta-purple/20 text-gta-purple border border-gta-purple/30 px-1.5 py-0.5 rounded tracking-widest uppercase shadow-[0_0_8px_rgba(112,0,255,0.2)]">
+                                 {tag}
+                               </span>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <a href={job.url} target="_blank" rel="noopener noreferrer" className="mt-4 w-full py-2.5 bg-white/5 border border-white/10 text-white rounded font-bold hover:bg-gta-pink hover:border-gta-pink hover:text-black transition-all text-xs tracking-widest uppercase flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(0,0,0,0.5)] group-hover:shadow-[0_0_15px_rgba(255,0,179,0.4)]">
+                          VIEW CONTRACT <ExternalLink className="w-4 h-4"/>
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          };
+
           const renderContent = () => {
             switch (activeTab) {
               case 'dashboard': return <DashboardView />;
               case 'news': return <NewsView />;
               case 'links': return <LinksView />;
+              case 'jobs': return <JobsView />;
               case 'identity': return <IdentityVaultView />;
               case 'finance': return <FinanceView />;
               case 'calls': return <CallsView />;
