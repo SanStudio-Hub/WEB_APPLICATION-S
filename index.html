@@ -114,7 +114,7 @@
           LayoutDashboard, Fingerprint, GraduationCap, Receipt, Plane, 
           PhoneCall, ShoppingCart, BookOpen, CreditCard, FolderLock, 
           Settings, Bell, Search, Sun, Moon, Eye, EyeOff, Menu, X,
-          Plus, Check, Download, Upload, Shield, Trash2, Calendar, MapPin, Pencil, Newspaper, ExternalLink, Activity, Globe, Link as LinkIcon, Briefcase
+          Plus, Check, Download, Upload, Shield, Trash2, Calendar, MapPin, Pencil, Newspaper, ExternalLink, Activity, Globe, Link as LinkIcon, Briefcase, TrendingUp, ArrowRightLeft
         } from 'lucide-react';
 
         // --- CUSTOM HOOKS ---
@@ -188,22 +188,21 @@
           const spanClasses = `col-span-1 md:col-span-${colSpan} row-span-${rowSpan}`;
           return (
             <div onClick={onClick} className={`relative overflow-hidden rounded-xl bg-gta-glass backdrop-blur-xl border border-white/5 shadow-[0_4px_30px_rgba(0,0,0,0.5)] transition-all duration-300 ease-out hover:-translate-y-1 hover:border-gta-cyan/40 hover:shadow-[0_0_20px_rgba(0,240,255,0.15)] p-6 group ${spanClasses} ${className}`}>
-              {/* Internal subtle glow */}
               <div className="absolute inset-0 bg-gradient-to-br from-gta-pink/5 to-gta-cyan/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
               <div className="relative z-10">{children}</div>
             </div>
           );
         };
 
-        const GtaButton = ({ children, onClick, variant = 'primary', className = '' }) => {
-          const baseClasses = "px-6 py-2.5 rounded-lg font-gta font-bold italic uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 text-sm shadow-lg";
+        const GtaButton = ({ children, onClick, variant = 'primary', className = '', disabled=false }) => {
+          const baseClasses = `px-6 py-2.5 rounded-lg font-gta font-bold italic uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 text-sm shadow-lg ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`;
           const variants = {
             primary: "bg-gradient-to-r from-gta-pink to-gta-purple text-white hover:from-gta-pink hover:to-gta-cyan hover:shadow-[0_0_15px_rgba(255,0,179,0.5)] border border-white/20",
             secondary: "bg-black/50 text-white border border-white/20 hover:border-gta-cyan hover:text-gta-cyan hover:shadow-[0_0_15px_rgba(0,240,255,0.3)]",
             danger: "bg-red-900/50 text-red-400 border border-red-500/30 hover:bg-red-600 hover:text-white hover:shadow-[0_0_15px_rgba(220,38,38,0.5)]"
           };
           return (
-            <button onClick={onClick} className={`${baseClasses} ${variants[variant]} ${className}`}>
+            <button onClick={onClick} disabled={disabled} className={`${baseClasses} ${variants[variant]} ${className}`}>
               {children}
             </button>
           );
@@ -223,7 +222,7 @@
           const [isDarkMode, setIsDarkMode] = useLocalStorage('lifeos_theme', true);
           const [isPrivacyMode, setIsPrivacyMode] = useState(false);
           
-          // NEW SECURITY STATE (Edit vs Read-Only)
+          // SECURITY STATE (Edit vs Read-Only)
           const [isEditMode, setIsEditMode] = useLocalStorage('lifeos_edit_mode', false);
 
           const [userName, setUserName] = useLocalStorage('lifeos_username', 'Santhosh');
@@ -255,7 +254,6 @@
 
           const getNotifications = () => {
             const notifs = [];
-            // Alert for Urgent or Overdue Bills
             (appData.bills || []).forEach(bill => {
               if (!bill.paid) {
                 const status = checkDueStatus(bill.dueDate);
@@ -271,7 +269,6 @@
                 }
               }
             });
-            // Alert for High Priority Tasks
             (appData.tasks || []).forEach(task => {
               if (!task.completed && task.priority === 'high') {
                 notifs.push({ 
@@ -284,7 +281,6 @@
                 });
               }
             });
-            // Alert for High Priority Links
             (appData.links || []).forEach(link => {
               if (!link.completed && link.priority === 'high') {
                 notifs.push({ 
@@ -311,6 +307,7 @@
 
           const navItems = [
             { id: 'dashboard', icon: LayoutDashboard, label: 'DASHBOARD' },
+            { id: 'currency', icon: TrendingUp, label: 'MONEY RATES' },
             { id: 'news', icon: Newspaper, label: 'LIVE NEWS' },
             { id: 'links', icon: Globe, label: 'COMMLINKS' },
             { id: 'jobs', icon: Briefcase, label: 'IT JOBS' },
@@ -325,7 +322,10 @@
             { id: 'documents', icon: FolderLock, label: 'DOCUMENTS' },
           ];
 
-          // --- SUB-VIEWS ---
+          // ===============================
+          // --- MODULE COMPONENTS ---
+          // ===============================
+
           const DashboardView = () => {
             const pendingTasks = (appData.tasks || []).filter(t => !t.completed).length;
             const urgentBills = (appData.bills || []).filter(b => !b.paid && checkDueStatus(b.dueDate).status !== 'normal').length;
@@ -335,21 +335,17 @@
             const [newTask, setNewTask] = useState('');
             const [editTaskId, setEditTaskId] = useState(null);
 
-            // Quick Links State
             const [isAddingQuickLink, setIsAddingQuickLink] = useState(false);
             const [quickLinkData, setQuickLinkData] = useState({ name: '', url: '' });
 
-            // Financial Summary State
             const [isEditingFinance, setIsEditingFinance] = useState(false);
             const [financeForm, setFinanceForm] = useState(appData.financeSummary || { balance: 0, income: 0, expense: 0 });
 
-            // Live Weather State (Tamil Nadu)
             const [weatherTemp, setWeatherTemp] = useState('28');
 
             useEffect(() => {
               const fetchWeather = async () => {
                 try {
-                  // Open-Meteo Free API - Using coordinates for the center of Tamil Nadu
                   const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=11.1271&longitude=78.6569&current_weather=true');
                   const data = await res.json();
                   if (data.current_weather) {
@@ -375,10 +371,9 @@
               setAppData({...appData, quickLinks: (appData.quickLinks || []).filter(l => l.id !== id)});
             };
 
-            // --- NEWS TICKER LOGIC (Tamil Nadu Live Feed) ---
             const [newsList, setNewsList] = useState([]);
             const [newsIndex, setNewsIndex] = useState(0);
-            const [displayMode, setDisplayMode] = useState('name'); // 'name' | 'news'
+            const [displayMode, setDisplayMode] = useState('name'); 
 
             useEffect(() => {
               const fetchNews = async () => {
@@ -399,19 +394,16 @@
             useEffect(() => {
               let timer;
               if (displayMode === 'name') {
-                // Wait 3 seconds before transitioning from Name to News
                 timer = setTimeout(() => {
                   if (newsList.length > 0) setDisplayMode('news');
                 }, 3000);
               } else {
-                // Cycle through headlines every 12 seconds to allow time for the slide
                 timer = setTimeout(() => {
                   setNewsIndex((prev) => (prev + 1) % newsList.length);
                 }, 12000);
               }
               return () => clearTimeout(timer);
             }, [displayMode, newsList, newsIndex]);
-            // --- END NEWS LOGIC ---
 
             const addTask = () => {
               if(!newTask) return;
@@ -434,7 +426,6 @@
             return (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-fade-in">
                 
-                {/* Welcome Widget - VICE CITY BANNER WITH LIVE NEWS */}
                 <WidgetCard colSpan={2} className="!bg-gradient-to-br from-[#ff00b3] via-[#7000ff] to-[#00f0ff] text-white border-white/20">
                   <div className="flex justify-between items-start h-full">
                     <div className="w-full">
@@ -443,18 +434,12 @@
                       <div className="text-4xl md:text-5xl font-gta font-black italic tracking-tighter drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]">
                         {getGreeting()}<br/>
                         <div className="relative h-[48px] md:h-[60px] overflow-hidden mt-1 w-full">
-                           
-                           {/* User Name Layer */}
                            <div className={`absolute inset-0 transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${displayMode === 'name' ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full'}`}>
                              <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-white">{userName}</span>
                            </div>
-                           
-                           {/* Live Tamil News Layer */}
                            <div className={`absolute inset-0 transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] flex items-center overflow-hidden w-full ${displayMode === 'news' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full'}`}>
                              <span key={newsIndex} className="animate-reveal-news text-lg md:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-200 font-sans not-italic font-bold tracking-normal pr-4 shadow-sm" title={newsList[newsIndex]}>
-                               <span className="inline-block text-gta-cyan mr-3 uppercase tracking-widest text-[10px] md:text-xs border border-gta-cyan bg-gta-cyan/10 px-2 py-0.5 rounded align-text-bottom shadow-[0_0_8px_rgba(0,240,255,0.4)]">
-                                  LIVE
-                               </span> 
+                               <span className="inline-block text-gta-cyan mr-3 uppercase tracking-widest text-[10px] md:text-xs border border-gta-cyan bg-gta-cyan/10 px-2 py-0.5 rounded align-text-bottom shadow-[0_0_8px_rgba(0,240,255,0.4)]">LIVE</span> 
                                {newsList[newsIndex]}
                              </span>
                            </div>
@@ -475,7 +460,6 @@
                   </div>
                 </WidgetCard>
 
-                {/* Learning Progress Widget - MOVED UP TO BALANCE ROW */}
                 <WidgetCard colSpan={2} className="flex flex-col justify-between cursor-pointer" onClick={() => setActiveTab('learning')}>
                   <div className="flex justify-between items-center mb-6">
                     <h3 className="text-lg font-gta font-bold italic tracking-wider flex items-center gap-2">
@@ -499,7 +483,6 @@
                   </div>
                 </WidgetCard>
 
-                {/* --- FINANCIAL OVERVIEW (BANK DETAILS) - MOVED TO SECOND ROW --- */}
                 <WidgetCard colSpan={4} className="flex flex-col">
                   <div className="flex justify-between items-center mb-4">
                      <h3 className="text-lg font-gta font-bold italic tracking-wider flex items-center gap-2">
@@ -562,7 +545,6 @@
                   )}
                 </WidgetCard>
 
-                {/* Summary Mini Widgets - MOVED DOWN BELOW FINANCIAL OVERVIEW */}
                 <WidgetCard className="flex flex-col justify-between cursor-pointer" onClick={() => setActiveTab('finance')}>
                   <div className="flex justify-between items-center">
                     <div className="p-3 bg-red-500/10 border border-red-500/30 text-red-500 rounded-xl transition-transform group-hover:scale-110 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
@@ -593,7 +575,6 @@
                   </div>
                 </WidgetCard>
 
-                {/* Quick Tasks List Widget */}
                 <WidgetCard colSpan={2} className="flex flex-col">
                   <div className="flex justify-between items-center mb-4">
                      <h3 className="text-lg font-gta font-bold italic tracking-wider flex items-center gap-2">
@@ -619,7 +600,6 @@
                     {(appData.tasks || []).map(task => (
                       <div key={task.id} className="flex items-center justify-between p-3 bg-black/40 border border-white/5 rounded-lg hover:border-gta-cyan/30 transition-colors group">
                         <div className="flex items-center gap-3">
-                          {/* Checkbox always active regardless of EditMode */}
                           <button 
                             className={`w-5 h-5 shrink-0 rounded border flex items-center justify-center transition-colors ${task.completed ? 'bg-gta-cyan border-gta-cyan text-black shadow-[0_0_10px_rgba(0,240,255,0.4)]' : 'border-white/20'}`}
                             onClick={() => {
@@ -636,7 +616,6 @@
                         <div className="flex items-center gap-2">
                           {task.priority === 'high' && <span className="w-2 h-2 rounded-full bg-gta-pink shadow-[0_0_8px_#ff00b3] mr-2"></span>}
                           
-                          {/* Edit/Delete only in Edit Mode */}
                           {isEditMode && (
                             <>
                               <button onClick={() => triggerEdit(task)} className="p-1.5 md:p-0 opacity-100 md:opacity-0 group-hover:opacity-100 text-gta-cyan hover:text-white transition-opacity"><Pencil className="w-4 h-4"/></button>
@@ -650,7 +629,6 @@
                   </div>
                 </WidgetCard>
 
-                {/* --- QUICK ACCESS DOCK (App Icons) --- */}
                 <WidgetCard colSpan={4} className="flex flex-col overflow-visible">
                   <div className="flex justify-between items-center mb-6">
                      <h3 className="text-lg font-gta font-bold italic tracking-wider flex items-center gap-2">
@@ -682,7 +660,6 @@
                                </button>
                              )}
                              <a href={link.url} target="_blank" rel="noopener noreferrer" className="w-[72px] h-[72px] md:w-20 md:h-20 rounded-[1.25rem] bg-black/80 border border-white/10 flex items-center justify-center hover:border-gta-cyan hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] transition-all overflow-hidden relative group-hover:-translate-y-2 shadow-[0_8px_15px_rgba(0,0,0,0.5)]">
-                                {/* Auto-fetches the actual Logo of the website using Google's S2 API */}
                                 <img src={`https://www.google.com/s2/favicons?domain=${domain}&sz=128`} alt={link.name} className="w-9 h-9 md:w-11 md:h-11 drop-shadow-lg object-contain" />
                              </a>
                              <span className="text-[9px] md:text-[10px] font-bold text-gray-400 group-hover:text-white uppercase tracking-widest text-center w-full truncate transition-colors">{link.name}</span>
@@ -700,6 +677,458 @@
                      )}
                   </div>
                 </WidgetCard>
+              </div>
+            );
+          };
+
+          // --- CURRENCY TERMINAL MODULE ---
+          const CurrencyView = () => {
+            const [rates, setRates] = useState({});
+            const [date, setDate] = useState('');
+            const [baseCurrency, setBaseCurrency] = useState('USD');
+            const [targetCurrency, setTargetCurrency] = useState('INR');
+            const [amount, setAmount] = useState(1);
+            const [loading, setLoading] = useState(true);
+
+            const CURRENCIES = {
+              USD: { name: 'United States Dollar', flag: '🇺🇸' },
+              INR: { name: 'Indian Rupee', flag: '🇮🇳' },
+              EUR: { name: 'Euro', flag: '🇪🇺' },
+              GBP: { name: 'British Pound', flag: '🇬🇧' },
+              JPY: { name: 'Japanese Yen', flag: '🇯🇵' },
+              AUD: { name: 'Australian Dollar', flag: '🇦🇺' },
+              CAD: { name: 'Canadian Dollar', flag: '🇨🇦' },
+              CNY: { name: 'Chinese Yuan', flag: '🇨🇳' },
+            };
+
+            const popularPairs = [
+              { base: 'USD', target: 'INR' },
+              { base: 'USD', target: 'EUR' },
+              { base: 'EUR', target: 'USD' },
+              { base: 'USD', target: 'JPY' },
+              { base: 'GBP', target: 'USD' },
+            ];
+
+            useEffect(() => {
+              const fetchRates = async () => {
+                setLoading(true);
+                try {
+                  const res = await fetch(`https://open.er-api.com/v6/latest/${baseCurrency}`);
+                  if (!res.ok) throw new Error('Network response was not ok');
+                  const data = await res.json();
+                  if (data && data.rates) {
+                    setRates(data.rates);
+                    setDate(data.time_last_update_utc ? new Date(data.time_last_update_utc).toLocaleDateString() : new Date().toLocaleDateString());
+                  }
+                } catch(e) {
+                  console.error("Failed to fetch rates", e);
+                  setRates({
+                    USD: baseCurrency === 'USD' ? 1 : 1.08,
+                    INR: baseCurrency === 'INR' ? 1 : 83.50,
+                    EUR: baseCurrency === 'EUR' ? 1 : 0.92,
+                    GBP: baseCurrency === 'GBP' ? 1 : 0.79,
+                    JPY: baseCurrency === 'JPY' ? 1 : 153.80,
+                    AUD: baseCurrency === 'AUD' ? 1 : 1.51,
+                    CAD: baseCurrency === 'CAD' ? 1 : 1.37,
+                    CNY: baseCurrency === 'CNY' ? 1 : 7.22,
+                  });
+                  setDate('OFFLINE (MOCK)');
+                }
+                setLoading(false);
+              };
+              fetchRates();
+            }, [baseCurrency]);
+
+            const handleSwap = () => {
+              setBaseCurrency(targetCurrency);
+              setTargetCurrency(baseCurrency);
+            };
+
+            const getRate = (target) => {
+              if (baseCurrency === target) return 1;
+              return rates[target] || 0;
+            };
+
+            const convertedAmount = (amount * getRate(targetCurrency)).toFixed(4);
+
+            return (
+              <div className="space-y-6 animate-fade-in">
+                <h2 className="text-3xl font-gta font-black italic tracking-tighter drop-shadow-[0_2px_10px_rgba(255,255,255,0.1)]">MARKET TERMINAL</h2>
+                
+                <div className="flex flex-col lg:flex-row gap-6">
+                   <div className="w-full lg:w-1/4 flex flex-col gap-3">
+                     <div className="p-4 bg-black/60 border border-white/10 rounded-xl mb-2">
+                        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">WATCHLIST</h3>
+                        <div className="space-y-2">
+                          {popularPairs.map((pair, idx) => {
+                             const pseudoChange = ((idx + 1) * 0.15 * (idx % 2 === 0 ? 1 : -1)).toFixed(2);
+                             const isPositive = pseudoChange > 0;
+                             
+                             return (
+                               <div 
+                                 key={idx} 
+                                 onClick={() => { setBaseCurrency(pair.base); setTargetCurrency(pair.target); }}
+                                 className={`flex justify-between items-center p-3 rounded-lg border transition-colors cursor-pointer ${baseCurrency === pair.base && targetCurrency === pair.target ? 'bg-gta-cyan/10 border-gta-cyan/50 shadow-[0_0_10px_rgba(0,240,255,0.2)]' : 'bg-white/5 border-white/5 hover:border-white/20'}`}
+                               >
+                                 <div className="flex flex-col">
+                                    <span className="font-bold text-sm text-white">{pair.base}/{pair.target}</span>
+                                    <span className="text-[10px] text-gray-500">{CURRENCIES[pair.target]?.name || pair.target}</span>
+                                 </div>
+                                 <div className="flex flex-col items-end">
+                                    <svg className="w-8 h-4 mb-1" viewBox="0 0 40 20">
+                                      <path d={isPositive ? "M0,20 L10,15 L20,18 L30,5 L40,0" : "M0,0 L10,5 L20,2 L30,15 L40,20"} fill="none" stroke={isPositive ? "#34d399" : "#ef4444"} strokeWidth="1.5"/>
+                                    </svg>
+                                    <span className={`text-[10px] font-bold ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
+                                      {isPositive ? '+' : ''}{pseudoChange}%
+                                    </span>
+                                 </div>
+                               </div>
+                             );
+                          })}
+                        </div>
+                     </div>
+                   </div>
+
+                   <div className="w-full lg:w-3/4 flex flex-col gap-6">
+                      <WidgetCard className="flex-1">
+                        <div className="flex justify-between items-start mb-6">
+                          <div>
+                            <div className="flex items-center gap-3 mb-2">
+                              <h3 className="text-lg font-bold text-white uppercase tracking-wide">CURRENCY CONVERTER</h3>
+                              <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] font-black italic rounded tracking-widest uppercase">LIVE MARKET</span>
+                            </div>
+                            {loading ? (
+                               <div className="h-10 w-48 bg-white/10 rounded animate-pulse mt-2"></div>
+                            ) : (
+                               <h1 className="text-4xl md:text-5xl font-gta font-black italic tracking-tighter drop-shadow-[0_2px_10px_rgba(0,240,255,0.4)]">
+                                 1 {baseCurrency} = <span className="text-gta-cyan">{getRate(targetCurrency)}</span> {targetCurrency}
+                               </h1>
+                            )}
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-3">LAST UPDATED: {date || 'SYNCING...'}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col md:flex-row items-center gap-4 mt-8 bg-black/40 p-6 rounded-xl border border-white/5 shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)]">
+                           <div className="flex-1 w-full">
+                              <label className="text-[10px] text-gray-500 font-bold tracking-widest uppercase mb-2 block">FROM</label>
+                              <div className="flex gap-2">
+                                <select 
+                                  value={baseCurrency} 
+                                  onChange={(e) => setBaseCurrency(e.target.value)}
+                                  className="w-full md:w-2/5 bg-black/60 border border-white/10 rounded-lg px-3 py-3 text-white outline-none focus:border-gta-cyan text-sm font-bold uppercase tracking-wider"
+                                >
+                                  {Object.keys(CURRENCIES).map(c => <option key={c} value={c}>{CURRENCIES[c].flag} {c}</option>)}
+                                </select>
+                                <GtaInput type="number" value={amount} onChange={(e) => setAmount(Number(e.target.value) || 0)} className="w-full md:w-3/5 text-lg font-mono" />
+                              </div>
+                           </div>
+
+                           <div className="pt-4 md:pt-6">
+                              <button onClick={handleSwap} className="p-3 bg-gta-purple/20 text-gta-purple border border-gta-purple/50 rounded-full hover:bg-gta-purple hover:text-white transition-all shadow-[0_0_15px_rgba(112,0,255,0.3)]">
+                                 <ArrowRightLeft className="w-5 h-5" />
+                              </button>
+                           </div>
+
+                           <div className="flex-1 w-full">
+                              <label className="text-[10px] text-gray-500 font-bold tracking-widest uppercase mb-2 block">TO</label>
+                              <div className="flex gap-2">
+                                <select 
+                                  value={targetCurrency} 
+                                  onChange={(e) => setTargetCurrency(e.target.value)}
+                                  className="w-full md:w-2/5 bg-black/60 border border-white/10 rounded-lg px-3 py-3 text-white outline-none focus:border-gta-cyan text-sm font-bold uppercase tracking-wider"
+                                >
+                                  {Object.keys(CURRENCIES).map(c => <option key={c} value={c}>{CURRENCIES[c].flag} {c}</option>)}
+                                </select>
+                                <GtaInput readOnly value={loading ? '...' : convertedAmount} className="w-full md:w-3/5 text-lg font-mono text-gta-cyan" />
+                              </div>
+                           </div>
+                        </div>
+
+                        <div className="mt-8 relative h-48 w-full border border-white/5 rounded-xl bg-black/40 overflow-hidden flex items-end">
+                           <div className="absolute inset-0 grid grid-cols-6 grid-rows-4 gap-0 opacity-10">
+                              {[...Array(24)].map((_, i) => <div key={i} className="border-r border-t border-white/20"></div>)}
+                           </div>
+                           <svg viewBox="0 0 1000 200" className="w-full h-full preserve-3d" preserveAspectRatio="none">
+                              <defs>
+                                <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                  <stop offset="0%" stopColor="#00f0ff" stopOpacity="0.3" />
+                                  <stop offset="100%" stopColor="#00f0ff" stopOpacity="0" />
+                                </linearGradient>
+                              </defs>
+                              <path d="M0,150 L100,160 L200,120 L300,130 L400,80 L500,90 L600,40 L700,60 L800,20 L900,50 L1000,30 L1000,200 L0,200 Z" fill="url(#gradient)" />
+                              <path d="M0,150 L100,160 L200,120 L300,130 L400,80 L500,90 L600,40 L700,60 L800,20 L900,50 L1000,30" fill="none" stroke="#00f0ff" strokeWidth="3" style={{filter: 'drop-shadow(0px 0px 8px rgba(0,240,255,0.8))'}} />
+                           </svg>
+                        </div>
+                      </WidgetCard>
+                   </div>
+                </div>
+              </div>
+            );
+          };
+
+          // --- IT JOBS MODULE (ARBEITNOW API) ---
+          const JobsView = () => {
+            const [jobs, setJobs] = useState([]);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+              const fetchJobs = async () => {
+                setLoading(true);
+                try {
+                  const res = await fetch('https://www.arbeitnow.com/api/job-board-api');
+                  const json = await res.json();
+                  if (json && json.data) {
+                     setJobs(json.data.slice(0, 30)); 
+                  }
+                } catch(e) {
+                  console.error("Failed to fetch jobs", e);
+                }
+                setLoading(false);
+              };
+              fetchJobs();
+            }, []);
+
+            return (
+              <div className="space-y-6 animate-fade-in">
+                <h2 className="text-3xl font-gta font-black italic tracking-tighter drop-shadow-[0_2px_10px_rgba(255,255,255,0.1)]">CAREER NETWORK</h2>
+                
+                {loading ? (
+                   <div className="flex flex-col items-center justify-center py-20 text-gta-pink animate-pulse">
+                      <Briefcase className="w-12 h-12 mb-4 drop-shadow-[0_0_10px_rgba(255,0,179,0.8)]" />
+                      <p className="font-gta font-bold italic tracking-widest text-lg">SCANNING JOB MARKET...</p>
+                   </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                    {jobs.map((job, idx) => (
+                      <div key={idx} className="p-5 h-full bg-black/60 border border-white/10 rounded-xl flex flex-col justify-between group hover:border-gta-pink/40 transition-colors shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+                        <div>
+                          <div className="flex justify-between items-start mb-3">
+                            <span className="px-2 py-1 bg-white/10 text-white border border-white/20 text-[10px] font-black italic rounded tracking-widest uppercase truncate max-w-[60%]">
+                              {job.company_name}
+                            </span>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider ${job.remote ? 'text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.5)]' : 'text-gray-500'}`}>
+                              {job.remote ? 'REMOTE' : job.location}
+                            </span>
+                          </div>
+                          <h3 className="text-lg font-bold text-white tracking-wide leading-snug mb-3 group-hover:text-gta-pink transition-colors">
+                             {job.title}
+                          </h3>
+                          <div className="flex flex-wrap gap-1.5 mb-4">
+                            {(job.tags || []).slice(0, 3).map(tag => (
+                               <span key={tag} className="text-[9px] bg-gta-purple/20 text-gta-purple border border-gta-purple/30 px-1.5 py-0.5 rounded tracking-widest uppercase shadow-[0_0_8px_rgba(112,0,255,0.2)]">
+                                 {tag}
+                               </span>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <a href={job.url} target="_blank" rel="noopener noreferrer" className="mt-4 w-full py-2.5 bg-white/5 border border-white/10 text-white rounded font-bold hover:bg-gta-pink hover:border-gta-pink hover:text-black transition-all text-xs tracking-widest uppercase flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(0,0,0,0.5)] group-hover:shadow-[0_0_15px_rgba(255,0,179,0.4)]">
+                          VIEW CONTRACT <ExternalLink className="w-4 h-4"/>
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          };
+
+          // --- COMMLINKS (WEB LINKS & TASKS) MODULE ---
+          const LinksView = () => {
+            const [newLink, setNewLink] = useState({ title: '', url: '', priority: 'normal' });
+            const [editId, setEditId] = useState(null);
+
+            const addLink = () => {
+              if(!newLink.title || !newLink.url) return;
+              let finalUrl = newLink.url.startsWith('http') ? newLink.url : `https://${newLink.url}`;
+              
+              if (editId) {
+                setAppData({...appData, links: (appData.links||[]).map(l => l.id === editId ? {...l, title: newLink.title, url: finalUrl, priority: newLink.priority} : l)});
+                setEditId(null);
+              } else {
+                const newObj = { id: Date.now(), title: newLink.title, url: finalUrl, priority: newLink.priority, completed: false };
+                setAppData({...appData, links: [newObj, ...(appData.links || [])]});
+              }
+              setNewLink({ title: '', url: '', priority: 'normal' });
+            };
+
+            const triggerEdit = (item) => {
+               setNewLink({ title: item.title, url: item.url, priority: item.priority });
+               setEditId(item.id);
+               window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+
+            const toggle = (id) => setAppData({...appData, links: (appData.links||[]).map(i => i.id === id ? {...i, completed: !i.completed} : i)});
+            const remove = (id) => setAppData({...appData, links: (appData.links||[]).filter(i => i.id !== id)});
+
+            return (
+              <div className="space-y-6 animate-fade-in">
+                <h2 className="text-3xl font-gta font-black italic tracking-tighter drop-shadow-[0_2px_10px_rgba(255,255,255,0.1)]">ACTIVE COMMLINKS</h2>
+                
+                {isEditMode && (
+                  <WidgetCard className="mb-6">
+                    <div className="flex flex-col lg:flex-row gap-3">
+                      <GtaInput value={newLink.title} onChange={e=>setNewLink({...newLink, title: e.target.value})} placeholder="TASK / ACTIVITY NAME (e.g., GitHub PRs)" className="flex-1" />
+                      <GtaInput value={newLink.url} onChange={e=>setNewLink({...newLink, url: e.target.value})} placeholder="URL (e.g., github.com)" className="flex-1" />
+                      
+                      <select 
+                        value={newLink.priority} 
+                        onChange={e=>setNewLink({...newLink, priority: e.target.value})} 
+                        className="bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-gta-cyan font-bold text-xs uppercase tracking-wider shadow-[inset_0_2px_4px_rgba(0,0,0,0.6)]"
+                      >
+                        <option value="normal">NORMAL PRIORITY</option>
+                        <option value="high">MUST DO (HIGH)</option>
+                      </select>
+
+                      <div className="flex gap-2">
+                         <GtaButton onClick={addLink} className="flex-1 lg:flex-none">
+                           {editId ? <><Check className="w-5 h-5"/> UPDATE</> : <><Plus className="w-5 h-5"/> ADD</>}
+                         </GtaButton>
+                         {editId && (
+                            <GtaButton variant="secondary" onClick={() => {setEditId(null); setNewLink({ title: '', url: '', priority: 'normal' });}}>CANCEL</GtaButton>
+                         )}
+                      </div>
+                    </div>
+                  </WidgetCard>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {(appData.links || []).map(item => {
+                    const urlHostname = item.url.replace(/^(?:https?:\/\/)?(?:www\.)?/i, "").split('/')[0];
+                    return (
+                      <div key={item.id} className="p-5 bg-black/60 border border-white/10 rounded-xl flex flex-col group hover:border-gta-cyan/40 transition-colors relative shadow-lg">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <button 
+                              onClick={() => toggle(item.id)} 
+                              className={`w-6 h-6 shrink-0 rounded border flex items-center justify-center transition-colors ${item.completed ? 'bg-gta-cyan border-gta-cyan text-black shadow-[0_0_10px_rgba(0,240,255,0.4)]' : 'border-white/20 hover:border-gta-cyan'}`}
+                            >
+                              {item.completed && <Check className="w-4 h-4" strokeWidth={3} />}
+                            </button>
+                            <div>
+                              <h3 className={`font-bold uppercase tracking-wide leading-tight ${item.completed ? 'text-gray-500 line-through' : 'text-white'}`}>
+                                {item.title}
+                              </h3>
+                              <div className="flex items-center gap-2 mt-1">
+                                {item.priority === 'high' && !item.completed && (
+                                  <span className="text-[9px] font-black italic bg-gta-pink/20 text-gta-pink border border-gta-pink/30 px-1.5 py-0.5 rounded tracking-widest uppercase shadow-[0_0_8px_rgba(255,0,179,0.3)]">
+                                    MUST DO
+                                  </span>
+                                )}
+                                <span className="text-xs text-gray-500 font-mono flex items-center gap-1">
+                                  <LinkIcon className="w-3 h-3"/> {urlHostname}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {isEditMode && (
+                            <div className="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => triggerEdit(item)} className="text-gta-cyan hover:text-white transition-colors"><Pencil className="w-4 h-4"/></button>
+                              <button onClick={() => remove(item.id)} className="text-gta-pink hover:text-white transition-colors"><Trash2 className="w-4 h-4"/></button>
+                            </div>
+                          )}
+                        </div>
+
+                        <button 
+                          onClick={() => setActiveIframeUrl(item.url)}
+                          className={`mt-auto w-full py-2.5 border rounded font-bold transition-all text-xs tracking-widest uppercase flex items-center justify-center gap-2 ${item.completed ? 'bg-white/5 border-white/5 text-gray-500 hover:bg-white/10' : 'bg-gta-cyan/10 border-gta-cyan/30 text-gta-cyan hover:bg-gta-cyan hover:text-black shadow-[0_0_10px_rgba(0,240,255,0.2)] hover:shadow-[0_0_20px_rgba(0,240,255,0.6)]'}`}
+                        >
+                          <Globe className="w-4 h-4"/> ACCESS TERMINAL
+                        </button>
+                      </div>
+                    )
+                  })}
+                  {(appData.links || []).length === 0 && <p className="text-gray-500 py-4 col-span-full font-bold tracking-wider text-sm">NO COMMLINKS ASSIGNED. {isEditMode ? '' : 'ENABLE ADMIN MODE TO ADD.'}</p>}
+                </div>
+              </div>
+            );
+          };
+
+          // --- DEDICATED LIVE NEWS MODULE ---
+          const NewsView = () => {
+            const [newsItems, setNewsItems] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [category, setCategory] = useState('TN');
+
+            const categories = {
+              'TN': { label: 'TAMIL NADU', query: 'தமிழ்நாடு' },
+              'IN': { label: 'INDIA', query: 'இந்தியா' },
+              'WRLD': { label: 'WORLD', query: 'உலகம்' }
+            };
+
+            useEffect(() => {
+              const fetchNews = async () => {
+                setLoading(true);
+                try {
+                  const rssUrl = encodeURIComponent(`https://news.google.com/rss/search?q=${categories[category].query}&hl=ta&gl=IN&ceid=IN:ta`);
+                  const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}`);
+                  const data = await res.json();
+                  if(data.status === 'ok') {
+                     setNewsItems(data.items);
+                  }
+                } catch(e) {
+                  console.error("Failed to fetch Live News", e);
+                }
+                setLoading(false);
+              };
+              fetchNews();
+            }, [category]);
+
+            return (
+              <div className="space-y-6 animate-fade-in">
+                <h2 className="text-3xl font-gta font-black italic tracking-tighter drop-shadow-[0_2px_10px_rgba(255,255,255,0.1)]">LIVE INTELLIGENCE</h2>
+                
+                <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2">
+                  {Object.entries(categories).map(([key, {label}]) => (
+                    <GtaButton 
+                      key={key}
+                      variant={category === key ? 'primary' : 'secondary'}
+                      onClick={() => setCategory(key)}
+                      className="whitespace-nowrap flex-1 md:flex-none"
+                    >
+                      {category === key && <Activity className="w-4 h-4 animate-pulse"/>}
+                      {label}
+                    </GtaButton>
+                  ))}
+                </div>
+
+                {loading ? (
+                   <div className="flex flex-col items-center justify-center py-20 text-gta-cyan animate-pulse">
+                      <Activity className="w-12 h-12 mb-4 drop-shadow-[0_0_10px_rgba(0,240,255,0.8)]" />
+                      <p className="font-gta font-bold italic tracking-widest text-lg">ESTABLISHING COMMLINK...</p>
+                   </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                    {newsItems.map((item, idx) => {
+                      const parts = item.title.split(' - ');
+                      const source = parts.length > 1 ? parts.pop() : 'NEWS FEED';
+                      const title = parts.join(' - ');
+                      
+                      return (
+                        <div key={idx} className="p-5 h-full bg-black/60 border border-white/10 rounded-xl flex flex-col justify-between group hover:border-gta-cyan/40 transition-colors shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+                          <div>
+                            <div className="flex justify-between items-start mb-3">
+                              <span className="px-2 py-1 bg-gta-purple/20 text-gta-purple border border-gta-purple/30 text-[10px] font-black italic rounded tracking-widest uppercase truncate max-w-[60%]">
+                                {source}
+                              </span>
+                              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
+                                {new Date(item.pubDate).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <h3 className="text-lg font-bold text-white tracking-wide leading-snug mb-4 group-hover:text-gta-cyan transition-colors line-clamp-3">
+                               {title}
+                            </h3>
+                          </div>
+                          
+                          <a href={item.link} target="_blank" rel="noopener noreferrer" className="mt-4 w-full py-2.5 bg-white/5 border border-white/10 text-white rounded font-bold hover:bg-gta-cyan hover:border-gta-cyan hover:text-black transition-all text-xs tracking-widest uppercase flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(0,0,0,0.5)] group-hover:shadow-[0_0_15px_rgba(0,240,255,0.4)]">
+                            READ FULL BRIEF <ExternalLink className="w-4 h-4"/>
+                          </a>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             );
           };
@@ -875,23 +1304,19 @@
                       <p className="text-xs text-gray-500 mt-4 font-bold tracking-wider uppercase">
                         DUE: {new Date(item.dueDate).toLocaleDateString()}
                       </p>
-                      {/* Mark Cleared button remains visible regardless of Edit Mode so users can clear bills! */}
                       {!item.paid && (
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
                             let newBills;
                             if (item.cycle && item.cycle !== 'None') {
-                              // Auto-renew: Calculate next due date and keep it unpaid
                               const nextDate = calculateNextDate(item.dueDate, item.cycle);
                               newBills = (appData.bills||[]).map(b => b.id === item.id ? {...b, dueDate: nextDate, paid: false} : b);
                             } else {
-                              // One-time bill: Just mark as paid
                               newBills = (appData.bills||[]).map(b => b.id === item.id ? {...b, paid: true} : b);
                             }
                             setAppData({...appData, bills: newBills});
                             
-                            // Visual feedback so the user instantly knows it worked
                             const btn = e.currentTarget;
                             const originalText = btn.innerText;
                             btn.innerText = item.cycle && item.cycle !== 'None' ? "EXTENDED!" : "CLEARED!";
@@ -917,101 +1342,6 @@
             />
           }
 
-          const SettingsView = () => (
-            <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
-              <h2 className="text-3xl font-gta font-black italic tracking-tighter drop-shadow-[0_2px_10px_rgba(255,255,255,0.1)]">SYSTEM SETTINGS</h2>
-              <WidgetCard>
-                <div className="space-y-4">
-                  
-                  {/* --- NEW EDIT/DEFAULT MODE TOGGLE --- */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-black/40 border border-white/5 rounded-xl gap-4 shadow-[inset_0_2px_10px_rgba(0,0,0,0.4)]">
-                    <div>
-                      <p className="font-bold text-white tracking-wide flex items-center gap-2">
-                        SYSTEM ACCESS LEVEL
-                        {isEditMode && <span className="w-2 h-2 rounded-full bg-gta-pink animate-pulse shadow-[0_0_8px_#ff00b3]"></span>}
-                      </p>
-                      <p className="text-xs text-gray-500 uppercase font-semibold mt-1">Unlock Edit, Add, & Delete capabilities</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`text-xs font-bold ${isEditMode ? 'text-gta-pink' : 'text-gray-500'}`}>
-                        {isEditMode ? 'ADMIN (EDIT MODE)' : 'DEFAULT (READ-ONLY)'}
-                      </span>
-                      <button 
-                        onClick={() => setIsEditMode(!isEditMode)}
-                        className={`w-16 h-8 shrink-0 rounded-full p-1 transition-colors border shadow-[inset_0_2px_4px_rgba(0,0,0,0.6)] ${isEditMode ? 'bg-gta-pink border-gta-pink' : 'bg-gray-600 border-gray-600'}`}
-                      >
-                        <div className={`w-6 h-6 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)] transform transition-transform ${isEditMode ? 'translate-x-8' : 'translate-x-0'}`}></div>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-black/40 border border-white/5 rounded-xl gap-4">
-                    <div>
-                      <p className="font-bold text-white tracking-wide">USER ALIAS</p>
-                      <p className="text-xs text-gray-500 uppercase font-semibold mt-1">Identification handle</p>
-                    </div>
-                    <GtaInput 
-                      type="text" 
-                      value={userName} 
-                      onChange={(e) => setUserName(e.target.value)}
-                      className="w-full sm:max-w-[200px]"
-                      disabled={!isEditMode}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-5 bg-black/40 border border-white/5 rounded-xl gap-4">
-                    <div>
-                      <p className="font-bold text-white tracking-wide">ENVIRONMENT</p>
-                      <p className="text-xs text-gray-500 uppercase font-semibold mt-1">Toggle Vice City Time</p>
-                    </div>
-                    <button 
-                      onClick={() => setIsDarkMode(!isDarkMode)}
-                      className={`w-16 h-8 shrink-0 rounded-full p-1 transition-colors border shadow-[inset_0_2px_4px_rgba(0,0,0,0.6)] ${isDarkMode ? 'bg-gta-purple border-gta-purple' : 'bg-gta-orange border-gta-orange'}`}
-                    >
-                      <div className={`w-6 h-6 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)] transform transition-transform ${isDarkMode ? 'translate-x-8' : 'translate-x-0'}`}></div>
-                    </button>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-black/40 border border-white/5 rounded-xl gap-4">
-                     <div>
-                      <p className="font-bold text-white tracking-wide">DATA BACKUP</p>
-                      <p className="text-xs text-gray-500 uppercase font-semibold mt-1">Export/Import JSON state</p>
-                    </div>
-                    <div className="flex gap-3 w-full sm:w-auto">
-                      <GtaButton variant="secondary" onClick={() => {
-                        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData));
-                        const downloadAnchorNode = document.createElement('a');
-                        downloadAnchorNode.setAttribute("href",     dataStr);
-                        downloadAnchorNode.setAttribute("download", "lifeos_backup.json");
-                        document.body.appendChild(downloadAnchorNode);
-                        downloadAnchorNode.click();
-                        downloadAnchorNode.remove();
-                      }} className="flex-1 sm:flex-none !p-3 justify-center"><Download className="w-5 h-5 text-gta-cyan" /></GtaButton>
-                      <GtaButton disabled={!isEditMode} variant="secondary" className={`flex-1 sm:flex-none !p-3 justify-center ${!isEditMode && 'opacity-50 cursor-not-allowed'}`}><Upload className="w-5 h-5 text-gta-pink" /></GtaButton>
-                    </div>
-                  </div>
-
-                  {isEditMode && (
-                    <div className="pt-6 mt-6 border-t border-white/10">
-                      <GtaButton 
-                        variant="danger"
-                        onClick={() => {
-                          if(window.confirm('WARNING: Erasing all local database entries. Confirm?')) {
-                            setAppData(INITIAL_DATA);
-                          }
-                        }}
-                        className="w-full !py-4 text-lg"
-                      >
-                        <Trash2 className="w-5 h-5" /> WIPE DATABASE
-                      </GtaButton>
-                    </div>
-                  )}
-                </div>
-              </WidgetCard>
-            </div>
-          );
-
-          // Build other views using GenericListView
           const CallsView = () => <GenericListView title="CONTACTS DB" dataKey="calls" fields={[{key:'name', placeholder:'ALIAS'}, {key:'number', placeholder:'COMMLINK NUM'}]} renderCard={(item) => (
              <div className="p-5 h-full bg-black/60 border border-white/10 rounded-xl flex flex-col justify-center group-hover:border-gta-cyan/40 transition-colors">
                  <h3 className="font-bold text-lg text-white uppercase tracking-wide pr-14">{item.name}</h3>
@@ -1135,276 +1465,108 @@
              </div>
           )} />;
 
-          // --- DEDICATED LIVE NEWS MODULE ---
-          const NewsView = () => {
-            const [newsItems, setNewsItems] = useState([]);
-            const [loading, setLoading] = useState(true);
-            const [category, setCategory] = useState('TN');
-
-            const categories = {
-              'TN': { label: 'TAMIL NADU', query: 'தமிழ்நாடு' },
-              'IN': { label: 'INDIA', query: 'இந்தியா' },
-              'WRLD': { label: 'WORLD', query: 'உலகம்' }
-            };
-
-            useEffect(() => {
-              const fetchNews = async () => {
-                setLoading(true);
-                try {
-                  const rssUrl = encodeURIComponent(`https://news.google.com/rss/search?q=${categories[category].query}&hl=ta&gl=IN&ceid=IN:ta`);
-                  const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}`);
-                  const data = await res.json();
-                  if(data.status === 'ok') {
-                     setNewsItems(data.items);
-                  }
-                } catch(e) {
-                  console.error("Failed to fetch Live News", e);
-                }
-                setLoading(false);
-              };
-              fetchNews();
-            }, [category]);
-
-            return (
-              <div className="space-y-6 animate-fade-in">
-                <h2 className="text-3xl font-gta font-black italic tracking-tighter drop-shadow-[0_2px_10px_rgba(255,255,255,0.1)]">LIVE INTELLIGENCE</h2>
-                
-                <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2">
-                  {Object.entries(categories).map(([key, {label}]) => (
-                    <GtaButton 
-                      key={key}
-                      variant={category === key ? 'primary' : 'secondary'}
-                      onClick={() => setCategory(key)}
-                      className="whitespace-nowrap flex-1 md:flex-none"
-                    >
-                      {category === key && <Activity className="w-4 h-4 animate-pulse"/>}
-                      {label}
-                    </GtaButton>
-                  ))}
-                </div>
-
-                {loading ? (
-                   <div className="flex flex-col items-center justify-center py-20 text-gta-cyan animate-pulse">
-                      <Activity className="w-12 h-12 mb-4 drop-shadow-[0_0_10px_rgba(0,240,255,0.8)]" />
-                      <p className="font-gta font-bold italic tracking-widest text-lg">ESTABLISHING COMMLINK...</p>
-                   </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                    {newsItems.map((item, idx) => {
-                      const parts = item.title.split(' - ');
-                      const source = parts.length > 1 ? parts.pop() : 'NEWS FEED';
-                      const title = parts.join(' - ');
-                      
-                      return (
-                        <div key={idx} className="p-5 h-full bg-black/60 border border-white/10 rounded-xl flex flex-col justify-between group hover:border-gta-cyan/40 transition-colors shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
-                          <div>
-                            <div className="flex justify-between items-start mb-3">
-                              <span className="px-2 py-1 bg-gta-purple/20 text-gta-purple border border-gta-purple/30 text-[10px] font-black italic rounded tracking-widest uppercase truncate max-w-[60%]">
-                                {source}
-                              </span>
-                              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
-                                {new Date(item.pubDate).toLocaleDateString()}
-                              </span>
-                            </div>
-                            <h3 className="text-lg font-bold text-white tracking-wide leading-snug mb-4 group-hover:text-gta-cyan transition-colors line-clamp-3">
-                               {title}
-                            </h3>
-                          </div>
-                          
-                          <a href={item.link} target="_blank" rel="noopener noreferrer" className="mt-4 w-full py-2.5 bg-white/5 border border-white/10 text-white rounded font-bold hover:bg-gta-cyan hover:border-gta-cyan hover:text-black transition-all text-xs tracking-widest uppercase flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(0,0,0,0.5)] group-hover:shadow-[0_0_15px_rgba(0,240,255,0.4)]">
-                            READ FULL BRIEF <ExternalLink className="w-4 h-4"/>
-                          </a>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          };
-
-          // --- COMMLINKS (WEB LINKS & TASKS) MODULE ---
-          const LinksView = () => {
-            const [newLink, setNewLink] = useState({ title: '', url: '', priority: 'normal' });
-            const [editId, setEditId] = useState(null);
-
-            const addLink = () => {
-              if(!newLink.title || !newLink.url) return;
-              let finalUrl = newLink.url.startsWith('http') ? newLink.url : `https://${newLink.url}`;
-              
-              if (editId) {
-                setAppData({...appData, links: (appData.links||[]).map(l => l.id === editId ? {...l, title: newLink.title, url: finalUrl, priority: newLink.priority} : l)});
-                setEditId(null);
-              } else {
-                const newObj = { id: Date.now(), title: newLink.title, url: finalUrl, priority: newLink.priority, completed: false };
-                setAppData({...appData, links: [newObj, ...(appData.links || [])]});
-              }
-              setNewLink({ title: '', url: '', priority: 'normal' });
-            };
-
-            const triggerEdit = (item) => {
-               setNewLink({ title: item.title, url: item.url, priority: item.priority });
-               setEditId(item.id);
-               window.scrollTo({ top: 0, behavior: 'smooth' });
-            };
-
-            const toggle = (id) => setAppData({...appData, links: (appData.links||[]).map(i => i.id === id ? {...i, completed: !i.completed} : i)});
-            const remove = (id) => setAppData({...appData, links: (appData.links||[]).filter(i => i.id !== id)});
-
-            return (
-              <div className="space-y-6 animate-fade-in">
-                <h2 className="text-3xl font-gta font-black italic tracking-tighter drop-shadow-[0_2px_10px_rgba(255,255,255,0.1)]">ACTIVE COMMLINKS</h2>
-                
-                {isEditMode && (
-                  <WidgetCard className="mb-6">
-                    <div className="flex flex-col lg:flex-row gap-3">
-                      <GtaInput value={newLink.title} onChange={e=>setNewLink({...newLink, title: e.target.value})} placeholder="TASK / ACTIVITY NAME (e.g., GitHub PRs)" className="flex-1" />
-                      <GtaInput value={newLink.url} onChange={e=>setNewLink({...newLink, url: e.target.value})} placeholder="URL (e.g., github.com)" className="flex-1" />
-                      
-                      <select 
-                        value={newLink.priority} 
-                        onChange={e=>setNewLink({...newLink, priority: e.target.value})} 
-                        className="bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-gta-cyan font-bold text-xs uppercase tracking-wider"
-                      >
-                        <option value="normal">NORMAL PRIORITY</option>
-                        <option value="high">MUST DO (HIGH)</option>
-                      </select>
-
-                      <div className="flex gap-2">
-                         <GtaButton onClick={addLink} className="flex-1 lg:flex-none">
-                           {editId ? <><Check className="w-5 h-5"/> UPDATE</> : <><Plus className="w-5 h-5"/> ADD</>}
-                         </GtaButton>
-                         {editId && (
-                            <GtaButton variant="secondary" onClick={() => {setEditId(null); setNewLink({ title: '', url: '', priority: 'normal' });}}>CANCEL</GtaButton>
-                         )}
-                      </div>
+          const SettingsView = () => (
+            <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
+              <h2 className="text-3xl font-gta font-black italic tracking-tighter drop-shadow-[0_2px_10px_rgba(255,255,255,0.1)]">SYSTEM SETTINGS</h2>
+              <WidgetCard>
+                <div className="space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-black/40 border border-white/5 rounded-xl gap-4 shadow-[inset_0_2px_10px_rgba(0,0,0,0.4)]">
+                    <div>
+                      <p className="font-bold text-white tracking-wide flex items-center gap-2">
+                        SYSTEM ACCESS LEVEL
+                        {isEditMode && <span className="w-2 h-2 rounded-full bg-gta-pink animate-pulse shadow-[0_0_8px_#ff00b3]"></span>}
+                      </p>
+                      <p className="text-xs text-gray-500 uppercase font-semibold mt-1">Unlock Edit, Add, & Delete capabilities</p>
                     </div>
-                  </WidgetCard>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {(appData.links || []).map(item => {
-                    const urlHostname = item.url.replace(/^(?:https?:\/\/)?(?:www\.)?/i, "").split('/')[0];
-                    return (
-                      <div key={item.id} className="p-5 bg-black/60 border border-white/10 rounded-xl flex flex-col group hover:border-gta-cyan/40 transition-colors relative shadow-lg">
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            <button 
-                              onClick={() => toggle(item.id)} 
-                              className={`w-6 h-6 shrink-0 rounded border flex items-center justify-center transition-colors ${item.completed ? 'bg-gta-cyan border-gta-cyan text-black shadow-[0_0_10px_rgba(0,240,255,0.4)]' : 'border-white/20 hover:border-gta-cyan'}`}
-                            >
-                              {item.completed && <Check className="w-4 h-4" strokeWidth={3} />}
-                            </button>
-                            <div>
-                              <h3 className={`font-bold uppercase tracking-wide leading-tight ${item.completed ? 'text-gray-500 line-through' : 'text-white'}`}>
-                                {item.title}
-                              </h3>
-                              <div className="flex items-center gap-2 mt-1">
-                                {item.priority === 'high' && !item.completed && (
-                                  <span className="text-[9px] font-black italic bg-gta-pink/20 text-gta-pink border border-gta-pink/30 px-1.5 py-0.5 rounded tracking-widest uppercase shadow-[0_0_8px_rgba(255,0,179,0.3)]">
-                                    MUST DO
-                                  </span>
-                                )}
-                                <span className="text-xs text-gray-500 font-mono flex items-center gap-1">
-                                  <LinkIcon className="w-3 h-3"/> {urlHostname}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {isEditMode && (
-                            <div className="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => triggerEdit(item)} className="text-gta-cyan hover:text-white transition-colors"><Pencil className="w-4 h-4"/></button>
-                              <button onClick={() => remove(item.id)} className="text-gta-pink hover:text-white transition-colors"><Trash2 className="w-4 h-4"/></button>
-                            </div>
-                          )}
-                        </div>
-
-                        <button 
-                          onClick={() => setActiveIframeUrl(item.url)}
-                          className={`mt-auto w-full py-2.5 border rounded font-bold transition-all text-xs tracking-widest uppercase flex items-center justify-center gap-2 ${item.completed ? 'bg-white/5 border-white/5 text-gray-500 hover:bg-white/10' : 'bg-gta-cyan/10 border-gta-cyan/30 text-gta-cyan hover:bg-gta-cyan hover:text-black shadow-[0_0_10px_rgba(0,240,255,0.2)] hover:shadow-[0_0_20px_rgba(0,240,255,0.6)]'}`}
-                        >
-                          <Globe className="w-4 h-4"/> ACCESS TERMINAL
-                        </button>
-                      </div>
-                    )
-                  })}
-                  {(appData.links || []).length === 0 && <p className="text-gray-500 py-4 col-span-full font-bold tracking-wider text-sm">NO COMMLINKS ASSIGNED. {isEditMode ? '' : 'ENABLE ADMIN MODE TO ADD.'}</p>}
-                </div>
-              </div>
-            );
-          };
-
-          // --- IT JOBS MODULE (ARBEITNOW API) ---
-          const JobsView = () => {
-            const [jobs, setJobs] = useState([]);
-            const [loading, setLoading] = useState(true);
-
-            useEffect(() => {
-              const fetchJobs = async () => {
-                setLoading(true);
-                try {
-                  const res = await fetch('https://www.arbeitnow.com/api/job-board-api');
-                  const json = await res.json();
-                  if (json && json.data) {
-                     setJobs(json.data.slice(0, 30)); // Display the top 30 recent jobs
-                  }
-                } catch(e) {
-                  console.error("Failed to fetch jobs", e);
-                }
-                setLoading(false);
-              };
-              fetchJobs();
-            }, []);
-
-            return (
-              <div className="space-y-6 animate-fade-in">
-                <h2 className="text-3xl font-gta font-black italic tracking-tighter drop-shadow-[0_2px_10px_rgba(255,255,255,0.1)]">CAREER NETWORK</h2>
-                
-                {loading ? (
-                   <div className="flex flex-col items-center justify-center py-20 text-gta-pink animate-pulse">
-                      <Briefcase className="w-12 h-12 mb-4 drop-shadow-[0_0_10px_rgba(255,0,179,0.8)]" />
-                      <p className="font-gta font-bold italic tracking-widest text-lg">SCANNING JOB MARKET...</p>
-                   </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                    {jobs.map((job, idx) => (
-                      <div key={idx} className="p-5 h-full bg-black/60 border border-white/10 rounded-xl flex flex-col justify-between group hover:border-gta-pink/40 transition-colors shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
-                        <div>
-                          <div className="flex justify-between items-start mb-3">
-                            <span className="px-2 py-1 bg-white/10 text-white border border-white/20 text-[10px] font-black italic rounded tracking-widest uppercase truncate max-w-[60%]">
-                              {job.company_name}
-                            </span>
-                            <span className={`text-[10px] font-bold uppercase tracking-wider ${job.remote ? 'text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.5)]' : 'text-gray-500'}`}>
-                              {job.remote ? 'REMOTE' : job.location}
-                            </span>
-                          </div>
-                          <h3 className="text-lg font-bold text-white tracking-wide leading-snug mb-3 group-hover:text-gta-pink transition-colors">
-                             {job.title}
-                          </h3>
-                          <div className="flex flex-wrap gap-1.5 mb-4">
-                            {(job.tags || []).slice(0, 3).map(tag => (
-                               <span key={tag} className="text-[9px] bg-gta-purple/20 text-gta-purple border border-gta-purple/30 px-1.5 py-0.5 rounded tracking-widest uppercase shadow-[0_0_8px_rgba(112,0,255,0.2)]">
-                                 {tag}
-                               </span>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        <a href={job.url} target="_blank" rel="noopener noreferrer" className="mt-4 w-full py-2.5 bg-white/5 border border-white/10 text-white rounded font-bold hover:bg-gta-pink hover:border-gta-pink hover:text-black transition-all text-xs tracking-widest uppercase flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(0,0,0,0.5)] group-hover:shadow-[0_0_15px_rgba(255,0,179,0.4)]">
-                          VIEW CONTRACT <ExternalLink className="w-4 h-4"/>
-                        </a>
-                      </div>
-                    ))}
+                    <div className="flex items-center gap-3">
+                      <span className={`text-xs font-bold ${isEditMode ? 'text-gta-pink' : 'text-gray-500'}`}>
+                        {isEditMode ? 'ADMIN (EDIT MODE)' : 'DEFAULT (READ-ONLY)'}
+                      </span>
+                      <button 
+                        onClick={() => setIsEditMode(!isEditMode)}
+                        className={`w-16 h-8 shrink-0 rounded-full p-1 transition-colors border shadow-[inset_0_2px_4px_rgba(0,0,0,0.6)] ${isEditMode ? 'bg-gta-pink border-gta-pink' : 'bg-gray-600 border-gray-600'}`}
+                      >
+                        <div className={`w-6 h-6 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)] transform transition-transform ${isEditMode ? 'translate-x-8' : 'translate-x-0'}`}></div>
+                      </button>
+                    </div>
                   </div>
-                )}
-              </div>
-            );
-          };
+
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-black/40 border border-white/5 rounded-xl gap-4">
+                    <div>
+                      <p className="font-bold text-white tracking-wide">USER ALIAS</p>
+                      <p className="text-xs text-gray-500 uppercase font-semibold mt-1">Identification handle</p>
+                    </div>
+                    <GtaInput 
+                      type="text" 
+                      value={userName} 
+                      onChange={(e) => setUserName(e.target.value)}
+                      className="w-full sm:max-w-[200px]"
+                      disabled={!isEditMode}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-5 bg-black/40 border border-white/5 rounded-xl gap-4">
+                    <div>
+                      <p className="font-bold text-white tracking-wide">ENVIRONMENT</p>
+                      <p className="text-xs text-gray-500 uppercase font-semibold mt-1">Toggle Vice City Time</p>
+                    </div>
+                    <button 
+                      onClick={() => setIsDarkMode(!isDarkMode)}
+                      className={`w-16 h-8 shrink-0 rounded-full p-1 transition-colors border shadow-[inset_0_2px_4px_rgba(0,0,0,0.6)] ${isDarkMode ? 'bg-gta-purple border-gta-purple' : 'bg-gta-orange border-gta-orange'}`}
+                    >
+                      <div className={`w-6 h-6 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)] transform transition-transform ${isDarkMode ? 'translate-x-8' : 'translate-x-0'}`}></div>
+                    </button>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-black/40 border border-white/5 rounded-xl gap-4">
+                     <div>
+                      <p className="font-bold text-white tracking-wide">DATA BACKUP</p>
+                      <p className="text-xs text-gray-500 uppercase font-semibold mt-1">Export/Import JSON state</p>
+                    </div>
+                    <div className="flex gap-3 w-full sm:w-auto">
+                      <GtaButton variant="secondary" onClick={() => {
+                        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData));
+                        const downloadAnchorNode = document.createElement('a');
+                        downloadAnchorNode.setAttribute("href",     dataStr);
+                        downloadAnchorNode.setAttribute("download", "lifeos_backup.json");
+                        document.body.appendChild(downloadAnchorNode);
+                        downloadAnchorNode.click();
+                        downloadAnchorNode.remove();
+                      }} className="flex-1 sm:flex-none !p-3 justify-center"><Download className="w-5 h-5 text-gta-cyan" /></GtaButton>
+                      <GtaButton disabled={!isEditMode} variant="secondary" className={`flex-1 sm:flex-none !p-3 justify-center ${!isEditMode && 'opacity-50 cursor-not-allowed'}`}><Upload className="w-5 h-5 text-gta-pink" /></GtaButton>
+                    </div>
+                  </div>
+
+                  {isEditMode && (
+                    <div className="pt-6 mt-6 border-t border-white/10">
+                      <GtaButton 
+                        variant="danger"
+                        onClick={() => {
+                          if(window.confirm('WARNING: Erasing all local database entries. Confirm?')) {
+                            setAppData(INITIAL_DATA);
+                          }
+                        }}
+                        className="w-full !py-4 text-lg"
+                      >
+                        <Trash2 className="w-5 h-5" /> WIPE DATABASE
+                      </GtaButton>
+                    </div>
+                  )}
+
+                  <div className="pt-6 mt-2 text-center">
+                    <p className="text-[10px] font-black italic tracking-widest text-gray-500 uppercase">
+                      DEV BY <a href="https://sanstudio-hub.github.io/in/" target="_blank" rel="noopener noreferrer" className="text-gta-cyan hover:text-gta-pink transition-colors drop-shadow-[0_0_5px_rgba(0,240,255,0.4)]">SANSTUDIO</a>
+                    </p>
+                  </div>
+                </div>
+              </WidgetCard>
+            </div>
+          );
 
           const renderContent = () => {
             switch (activeTab) {
               case 'dashboard': return <DashboardView />;
+              case 'currency': return <CurrencyView />;
               case 'news': return <NewsView />;
               case 'links': return <LinksView />;
               case 'jobs': return <JobsView />;
@@ -1583,13 +1745,6 @@
                   })}
                 </div>
               </nav>
-
-              {/* Branding Footer */}
-              <div className="hidden md:block fixed bottom-4 right-6 z-50">
-                <a href="https://a-santhosh-hub.github.io/in/" target="_blank" rel="noopener noreferrer" className="text-[10px] font-black italic tracking-widest text-white/40 hover:text-gta-cyan transition-colors bg-black/60 backdrop-blur-md px-3 py-1.5 rounded border border-white/10 shadow-[0_0_10px_rgba(0,0,0,0.5)]">
-                  DEV BY SANTHOSH A
-                </a>
-              </div>
 
               {/* IFRAME MODAL / IN-APP BROWSER */}
               {activeIframeUrl && (
