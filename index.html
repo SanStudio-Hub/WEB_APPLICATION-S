@@ -475,38 +475,31 @@
                   </div>
                 </WidgetCard>
 
-                {/* Summary Mini Widgets */}
-                <WidgetCard className="flex flex-col justify-between cursor-pointer" onClick={() => setActiveTab('finance')}>
-                  <div className="flex justify-between items-center">
-                    <div className="p-3 bg-red-500/10 border border-red-500/30 text-red-500 rounded-xl transition-transform group-hover:scale-110 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
-                      <Receipt className="w-6 h-6" />
-                    </div>
-                    {urgentBills > 0 && (
-                      <span className="flex h-3 w-3 relative">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 shadow-[0_0_8px_#ef4444]"></span>
-                      </span>
-                    )}
+                {/* Learning Progress Widget - MOVED UP TO BALANCE ROW */}
+                <WidgetCard colSpan={2} className="flex flex-col justify-between cursor-pointer" onClick={() => setActiveTab('learning')}>
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-gta font-bold italic tracking-wider flex items-center gap-2">
+                      <BookOpen className="w-5 h-5 text-gta-purple" /> SKILL PROGRESS
+                    </h3>
+                    <span className="text-sm font-black italic text-gta-cyan drop-shadow-[0_0_5px_rgba(0,240,255,0.5)]">{Math.round(avgLearning)}% AVG</span>
                   </div>
-                  <div className="mt-4">
-                    <p className="text-4xl font-gta font-black italic">{urgentBills}</p>
-                    <p className="text-xs font-bold text-gray-400 tracking-wider uppercase mt-1">Pending Bills</p>
-                  </div>
-                </WidgetCard>
-
-                <WidgetCard className="flex flex-col justify-between cursor-pointer" onClick={() => setActiveTab('dashboard')}>
-                  <div className="flex justify-between items-center">
-                     <div className="p-3 bg-gta-cyan/10 border border-gta-cyan/30 text-gta-cyan rounded-xl transition-transform group-hover:scale-110 shadow-[0_0_15px_rgba(0,240,255,0.2)]">
-                      <LayoutDashboard className="w-6 h-6" />
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <p className="text-4xl font-gta font-black italic">{pendingTasks}</p>
-                    <p className="text-xs font-bold text-gray-400 tracking-wider uppercase mt-1">Active Tasks</p>
+                  <div className="space-y-5">
+                    {learningItems.slice(0,2).map(course => (
+                      <div key={course.id}>
+                        <div className="flex justify-between text-sm mb-2 font-bold">
+                          <span className="text-gray-200 uppercase tracking-wide text-xs">{course.course}</span>
+                          <span className="text-gta-pink">{course.progress}%</span>
+                        </div>
+                        <div className="w-full bg-black/60 border border-white/5 rounded-full h-3 p-0.5 overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)]">
+                          <div className="bg-gradient-to-r from-gta-purple to-gta-pink h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(255,0,179,0.5)]" style={{ width: `${course.progress}%` }}></div>
+                        </div>
+                      </div>
+                    ))}
+                    {learningItems.length === 0 && <p className="text-sm text-gray-500 font-medium">NO ACTIVE TRAINING.</p>}
                   </div>
                 </WidgetCard>
 
-                {/* --- FINANCIAL OVERVIEW (BANK DETAILS) --- */}
+                {/* --- FINANCIAL OVERVIEW (BANK DETAILS) - MOVED TO SECOND ROW --- */}
                 <WidgetCard colSpan={4} className="flex flex-col">
                   <div className="flex justify-between items-center mb-4">
                      <h3 className="text-lg font-gta font-bold italic tracking-wider flex items-center gap-2">
@@ -569,27 +562,34 @@
                   )}
                 </WidgetCard>
 
-                {/* Learning Progress Widget */}
-                <WidgetCard colSpan={2} className="flex flex-col justify-between cursor-pointer" onClick={() => setActiveTab('learning')}>
-                  <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-lg font-gta font-bold italic tracking-wider flex items-center gap-2">
-                      <BookOpen className="w-5 h-5 text-gta-purple" /> SKILL PROGRESS
-                    </h3>
-                    <span className="text-sm font-black italic text-gta-cyan drop-shadow-[0_0_5px_rgba(0,240,255,0.5)]">{Math.round(avgLearning)}% AVG</span>
+                {/* Summary Mini Widgets - MOVED DOWN BELOW FINANCIAL OVERVIEW */}
+                <WidgetCard className="flex flex-col justify-between cursor-pointer" onClick={() => setActiveTab('finance')}>
+                  <div className="flex justify-between items-center">
+                    <div className="p-3 bg-red-500/10 border border-red-500/30 text-red-500 rounded-xl transition-transform group-hover:scale-110 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+                      <Receipt className="w-6 h-6" />
+                    </div>
+                    {urgentBills > 0 && (
+                      <span className="flex h-3 w-3 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 shadow-[0_0_8px_#ef4444]"></span>
+                      </span>
+                    )}
                   </div>
-                  <div className="space-y-5">
-                    {learningItems.slice(0,2).map(course => (
-                      <div key={course.id}>
-                        <div className="flex justify-between text-sm mb-2 font-bold">
-                          <span className="text-gray-200 uppercase tracking-wide text-xs">{course.course}</span>
-                          <span className="text-gta-pink">{course.progress}%</span>
-                        </div>
-                        <div className="w-full bg-black/60 border border-white/5 rounded-full h-3 p-0.5 overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)]">
-                          <div className="bg-gradient-to-r from-gta-purple to-gta-pink h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(255,0,179,0.5)]" style={{ width: `${course.progress}%` }}></div>
-                        </div>
-                      </div>
-                    ))}
-                    {learningItems.length === 0 && <p className="text-sm text-gray-500 font-medium">NO ACTIVE TRAINING.</p>}
+                  <div className="mt-4">
+                    <p className="text-4xl font-gta font-black italic">{urgentBills}</p>
+                    <p className="text-xs font-bold text-gray-400 tracking-wider uppercase mt-1">Pending Bills</p>
+                  </div>
+                </WidgetCard>
+
+                <WidgetCard className="flex flex-col justify-between cursor-pointer" onClick={() => setActiveTab('dashboard')}>
+                  <div className="flex justify-between items-center">
+                     <div className="p-3 bg-gta-cyan/10 border border-gta-cyan/30 text-gta-cyan rounded-xl transition-transform group-hover:scale-110 shadow-[0_0_15px_rgba(0,240,255,0.2)]">
+                      <LayoutDashboard className="w-6 h-6" />
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <p className="text-4xl font-gta font-black italic">{pendingTasks}</p>
+                    <p className="text-xs font-bold text-gray-400 tracking-wider uppercase mt-1">Active Tasks</p>
                   </div>
                 </WidgetCard>
 
