@@ -114,7 +114,7 @@
           LayoutDashboard, Fingerprint, GraduationCap, Receipt, Plane, 
           PhoneCall, ShoppingCart, BookOpen, CreditCard, FolderLock, 
           Settings, Bell, Search, Sun, Moon, Eye, EyeOff, Menu, X,
-          Plus, Check, Download, Upload, Shield, Trash2, Calendar, MapPin, Pencil, Newspaper, ExternalLink, Activity
+          Plus, Check, Download, Upload, Shield, Trash2, Calendar, MapPin, Pencil, Newspaper, ExternalLink, Activity, Globe, Link as LinkIcon
         } from 'lucide-react';
 
         // --- CUSTOM HOOKS ---
@@ -169,7 +169,11 @@
           travel: [{ id: 1, destination: 'New York', date: '2026-06-15', type: 'Flight' }],
           calls: [{ id: 1, name: 'Santhosh (Client)', number: '+91 9876543210', completed: false }],
           shopping: [{ id: 1, item: 'Wireless Mouse', completed: false }],
-          documents: [{ id: 1, name: 'Passport', expiry: '2030-01-01' }]
+          documents: [{ id: 1, name: 'Passport', expiry: '2030-01-01' }],
+          links: [
+            { id: 1, title: 'GitHub Daily Commit', url: 'https://github.com', priority: 'high', completed: false },
+            { id: 2, title: 'University Portal', url: 'https://example.com', priority: 'normal', completed: true }
+          ]
         };
 
         // --- GTA STYLE COMPONENTS ---
@@ -213,6 +217,8 @@
           const [isPrivacyMode, setIsPrivacyMode] = useState(false);
           const [userName, setUserName] = useLocalStorage('lifeos_username', 'Santhosh');
           const [appData, setAppData] = useLocalStorage('lifeos_user_data', INITIAL_DATA);
+          const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+          const [activeIframeUrl, setActiveIframeUrl] = useState(null);
 
           useEffect(() => {
             if (isDarkMode) document.documentElement.classList.add('dark');
@@ -236,6 +242,55 @@
             return { status: 'normal', text: `IN ${diffDays} DAYS`, color: 'text-gray-400 border-gray-600 bg-white/5' };
           };
 
+          const getNotifications = () => {
+            const notifs = [];
+            // Alert for Urgent or Overdue Bills
+            (appData.bills || []).forEach(bill => {
+              if (!bill.paid) {
+                const status = checkDueStatus(bill.dueDate);
+                if (status.status !== 'normal') {
+                  notifs.push({ 
+                    id: `bill-${bill.id}`, 
+                    title: `BILL ${status.status.toUpperCase()}`, 
+                    message: `${bill.name} - ${maskText(bill.amount, 'amount')}`, 
+                    time: status.text, 
+                    color: status.status === 'overdue' ? 'text-red-500' : 'text-gta-orange', 
+                    icon: Receipt 
+                  });
+                }
+              }
+            });
+            // Alert for High Priority Tasks
+            (appData.tasks || []).forEach(task => {
+              if (!task.completed && task.priority === 'high') {
+                notifs.push({ 
+                  id: `task-${task.id}`, 
+                  title: 'HIGH PRIORITY TASK', 
+                  message: task.title, 
+                  time: 'PENDING', 
+                  color: 'text-gta-pink', 
+                  icon: LayoutDashboard 
+                });
+              }
+            });
+            // Alert for High Priority Links
+            (appData.links || []).forEach(link => {
+              if (!link.completed && link.priority === 'high') {
+                notifs.push({ 
+                  id: `link-${link.id}`, 
+                  title: 'MUST DO COMMLINK', 
+                  message: link.title, 
+                  time: 'ACTION REQUIRED', 
+                  color: 'text-gta-cyan', 
+                  icon: Globe 
+                });
+              }
+            });
+            return notifs;
+          };
+
+          const notifications = getNotifications();
+
           const getGreeting = () => {
             const hour = new Date().getHours();
             if (hour < 12) return 'GOOD MORNING';
@@ -246,6 +301,7 @@
           const navItems = [
             { id: 'dashboard', icon: LayoutDashboard, label: 'DASHBOARD' },
             { id: 'news', icon: Newspaper, label: 'LIVE NEWS' },
+            { id: 'links', icon: Globe, label: 'COMMLINKS' },
             { id: 'identity', icon: Fingerprint, label: 'IDENTITY VAULT' },
             { id: 'education', icon: GraduationCap, label: 'EDUCATION' },
             { id: 'finance', icon: Receipt, label: 'FINANCE' },
@@ -820,10 +876,119 @@
             );
           };
 
+          // --- COMMLINKS (WEB LINKS & TASKS) MODULE ---
+          const LinksView = () => {
+            const [newLink, setNewLink] = useState({ title: '', url: '', priority: 'normal' });
+            const [editId, setEditId] = useState(null);
+
+            const addLink = () => {
+              if(!newLink.title || !newLink.url) return;
+              let finalUrl = newLink.url.startsWith('http') ? newLink.url : `https://${newLink.url}`;
+              
+              if (editId) {
+                setAppData({...appData, links: (appData.links||[]).map(l => l.id === editId ? {...l, title: newLink.title, url: finalUrl, priority: newLink.priority} : l)});
+                setEditId(null);
+              } else {
+                const newObj = { id: Date.now(), title: newLink.title, url: finalUrl, priority: newLink.priority, completed: false };
+                setAppData({...appData, links: [newObj, ...(appData.links || [])]});
+              }
+              setNewLink({ title: '', url: '', priority: 'normal' });
+            };
+
+            const triggerEdit = (item) => {
+               setNewLink({ title: item.title, url: item.url, priority: item.priority });
+               setEditId(item.id);
+               window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+
+            const toggle = (id) => setAppData({...appData, links: (appData.links||[]).map(i => i.id === id ? {...i, completed: !i.completed} : i)});
+            const remove = (id) => setAppData({...appData, links: (appData.links||[]).filter(i => i.id !== id)});
+
+            return (
+              <div className="space-y-6 animate-fade-in">
+                <h2 className="text-3xl font-gta font-black italic tracking-tighter drop-shadow-[0_2px_10px_rgba(255,255,255,0.1)]">ACTIVE COMMLINKS</h2>
+                
+                <WidgetCard className="mb-6">
+                  <div className="flex flex-col lg:flex-row gap-3">
+                    <GtaInput value={newLink.title} onChange={e=>setNewLink({...newLink, title: e.target.value})} placeholder="TASK / ACTIVITY NAME (e.g., GitHub PRs)" className="flex-1" />
+                    <GtaInput value={newLink.url} onChange={e=>setNewLink({...newLink, url: e.target.value})} placeholder="URL (e.g., github.com)" className="flex-1" />
+                    
+                    <select 
+                      value={newLink.priority} 
+                      onChange={e=>setNewLink({...newLink, priority: e.target.value})} 
+                      className="bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-gta-cyan font-bold text-xs uppercase tracking-wider"
+                    >
+                      <option value="normal">NORMAL PRIORITY</option>
+                      <option value="high">MUST DO (HIGH)</option>
+                    </select>
+
+                    <div className="flex gap-2">
+                       <GtaButton onClick={addLink} className="flex-1 lg:flex-none">
+                         {editId ? <><Check className="w-5 h-5"/> UPDATE</> : <><Plus className="w-5 h-5"/> ADD</>}
+                       </GtaButton>
+                       {editId && (
+                          <GtaButton variant="secondary" onClick={() => {setEditId(null); setNewLink({ title: '', url: '', priority: 'normal' });}}>CANCEL</GtaButton>
+                       )}
+                    </div>
+                  </div>
+                </WidgetCard>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {(appData.links || []).map(item => {
+                    const urlHostname = item.url.replace(/^(?:https?:\/\/)?(?:www\.)?/i, "").split('/')[0];
+                    return (
+                      <div key={item.id} className="p-5 bg-black/60 border border-white/10 rounded-xl flex flex-col group hover:border-gta-cyan/40 transition-colors relative shadow-lg">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <button 
+                              onClick={() => toggle(item.id)} 
+                              className={`w-6 h-6 shrink-0 rounded border flex items-center justify-center transition-colors ${item.completed ? 'bg-gta-cyan border-gta-cyan text-black shadow-[0_0_10px_rgba(0,240,255,0.4)]' : 'border-white/20 hover:border-gta-cyan'}`}
+                            >
+                              {item.completed && <Check className="w-4 h-4" strokeWidth={3} />}
+                            </button>
+                            <div>
+                              <h3 className={`font-bold uppercase tracking-wide leading-tight ${item.completed ? 'text-gray-500 line-through' : 'text-white'}`}>
+                                {item.title}
+                              </h3>
+                              <div className="flex items-center gap-2 mt-1">
+                                {item.priority === 'high' && !item.completed && (
+                                  <span className="text-[9px] font-black italic bg-gta-pink/20 text-gta-pink border border-gta-pink/30 px-1.5 py-0.5 rounded tracking-widest uppercase shadow-[0_0_8px_rgba(255,0,179,0.3)]">
+                                    MUST DO
+                                  </span>
+                                )}
+                                <span className="text-xs text-gray-500 font-mono flex items-center gap-1">
+                                  <LinkIcon className="w-3 h-3"/> {urlHostname}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => triggerEdit(item)} className="text-gta-cyan hover:text-white transition-colors"><Pencil className="w-4 h-4"/></button>
+                            <button onClick={() => remove(item.id)} className="text-gta-pink hover:text-white transition-colors"><Trash2 className="w-4 h-4"/></button>
+                          </div>
+                        </div>
+
+                        <button 
+                          onClick={() => setActiveIframeUrl(item.url)}
+                          className={`mt-auto w-full py-2.5 border rounded font-bold transition-all text-xs tracking-widest uppercase flex items-center justify-center gap-2 ${item.completed ? 'bg-white/5 border-white/5 text-gray-500 hover:bg-white/10' : 'bg-gta-cyan/10 border-gta-cyan/30 text-gta-cyan hover:bg-gta-cyan hover:text-black shadow-[0_0_10px_rgba(0,240,255,0.2)] hover:shadow-[0_0_20px_rgba(0,240,255,0.6)]'}`}
+                        >
+                          <Globe className="w-4 h-4"/> ACCESS TERMINAL
+                        </button>
+                      </div>
+                    )
+                  })}
+                  {(appData.links || []).length === 0 && <p className="text-gray-500 py-4 col-span-full font-bold tracking-wider text-sm">NO COMMLINKS ASSIGNED.</p>}
+                </div>
+              </div>
+            );
+          };
+
           const renderContent = () => {
             switch (activeTab) {
               case 'dashboard': return <DashboardView />;
               case 'news': return <NewsView />;
+              case 'links': return <LinksView />;
               case 'identity': return <IdentityVaultView />;
               case 'finance': return <FinanceView />;
               case 'calls': return <CallsView />;
@@ -910,10 +1075,55 @@
                       {isPrivacyMode ? 'GHOST MODE' : 'PUBLIC'}
                     </button>
                     
-                    <button className="relative p-2.5 bg-black/50 border border-white/10 rounded-lg text-gray-400 hover:text-white transition-colors">
-                      <Bell className="w-5 h-5" />
-                      <span className="absolute top-2 right-2 w-2 h-2 bg-gta-pink rounded-full shadow-[0_0_8px_#ff00b3]"></span>
-                    </button>
+                    <div className="relative">
+                      <button onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} className="relative p-2.5 bg-black/50 border border-white/10 rounded-lg text-gray-400 hover:text-white transition-colors">
+                        <Bell className="w-5 h-5" />
+                        {notifications.length > 0 && (
+                          <span className="absolute top-2 right-2 w-2 h-2 bg-gta-pink rounded-full shadow-[0_0_8px_#ff00b3] animate-pulse"></span>
+                        )}
+                      </button>
+
+                      {isNotificationsOpen && (
+                        <>
+                          {/* Invisible overlay to detect clicks outside the dropdown */}
+                          <div className="fixed inset-0 cursor-default" onClick={() => setIsNotificationsOpen(false)}></div>
+                          
+                          {/* Dropdown Panel */}
+                          <div className="absolute right-0 mt-3 w-72 md:w-80 bg-[#0a0a0c]/95 backdrop-blur-3xl border border-white/10 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-50 overflow-hidden animate-fade-in origin-top-right">
+                            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
+                              <h3 className="font-gta font-bold italic tracking-widest text-white text-sm">SYSTEM ALERTS</h3>
+                              <span className="bg-gta-pink text-white text-[10px] font-black px-2 py-0.5 rounded shadow-[0_0_8px_#ff00b3]">
+                                {notifications.length}
+                              </span>
+                            </div>
+                            
+                            <div className="max-h-[60vh] overflow-y-auto custom-scrollbar">
+                              {notifications.length === 0 ? (
+                                <div className="p-6 text-center text-gray-500 font-bold tracking-wider text-xs">NO ACTIVE ALERTS</div>
+                              ) : (
+                                notifications.map(notif => {
+                                  const NIcon = notif.icon;
+                                  return (
+                                    <div key={notif.id} className="p-4 border-b border-white/5 hover:bg-white/5 transition-colors flex gap-3 cursor-pointer" onClick={() => setIsNotificationsOpen(false)}>
+                                      <div className={`p-2 rounded-lg bg-white/5 border border-white/10 h-max ${notif.color}`}>
+                                        <NIcon className="w-4 h-4" />
+                                      </div>
+                                      <div>
+                                        <p className={`text-[10px] font-black italic tracking-widest uppercase mb-1 ${notif.color}`}>
+                                          {notif.title}
+                                        </p>
+                                        <p className="text-sm font-bold text-gray-200 mb-1 leading-tight">{notif.message}</p>
+                                        <p className="text-xs text-gray-500 tracking-wider font-semibold">{notif.time}</p>
+                                      </div>
+                                    </div>
+                                  )
+                                })
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
                     
                     <div className="w-10 h-10 rounded border border-gta-purple/50 bg-gradient-to-br from-gta-purple to-gta-pink text-white flex items-center justify-center font-gta font-black italic text-lg shadow-[0_0_15px_rgba(112,0,255,0.4)]">
                       {userName.charAt(0).toUpperCase()}
@@ -934,9 +1144,9 @@
                 <div className="flex items-center justify-around p-2 gap-1">
                   {[
                     { id: 'dashboard', icon: LayoutDashboard, label: 'HUB' },
+                    { id: 'links', icon: Globe, label: 'TASKS' },
                     { id: 'news', icon: Newspaper, label: 'NEWS' },
                     { id: 'finance', icon: Receipt, label: 'FUNDS' },
-                    { id: 'documents', icon: FolderLock, label: 'DOCS' },
                     { id: 'settings', icon: Settings, label: 'SYS' }
                   ].map(item => {
                     const Icon = item.icon;
@@ -957,6 +1167,39 @@
                   DEV BY SANTHOSH A
                 </a>
               </div>
+
+              {/* IFRAME MODAL / IN-APP BROWSER */}
+              {activeIframeUrl && (
+                <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex flex-col animate-fade-in">
+                  <div className="h-16 border-b border-white/10 flex items-center justify-between px-4 bg-[#0a0a0c] shadow-[0_4px_20px_rgba(0,0,0,0.8)] z-10">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div className="w-2 h-8 bg-gta-cyan rounded-full shadow-[0_0_8px_#00f0ff]"></div>
+                      <span className="text-white font-gta font-bold italic tracking-wider truncate text-sm md:text-base">{activeIframeUrl}</span>
+                    </div>
+                    <div className="flex items-center gap-4 shrink-0 pl-2">
+                      <a href={activeIframeUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-[10px] md:text-xs font-black italic tracking-widest bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded transition-colors uppercase border border-white/10">
+                        <ExternalLink className="w-4 h-4"/> <span className="hidden md:inline">OPEN EXTERNALLY</span>
+                      </a>
+                      <button onClick={() => setActiveIframeUrl(null)} className="p-2 bg-red-500/20 text-red-500 border border-red-500/30 hover:bg-red-500 hover:text-white rounded transition-colors shadow-[0_0_10px_rgba(239,68,68,0.3)]">
+                        <X className="w-5 h-5"/>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex-1 w-full h-full relative bg-gray-900">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center z-0">
+                      <Globe className="w-16 h-16 text-white/10 mb-4 animate-pulse"/>
+                      <p className="text-gray-400 font-gta font-bold tracking-widest text-sm mb-2 uppercase">SECURE CONNECTION INITIATED</p>
+                      <p className="text-gray-600 text-xs font-semibold max-w-md">If the target database (like GitHub) refuses the embedded connection frame for security protocols, please utilize the "Open Externally" command above.</p>
+                    </div>
+                    <iframe 
+                      src={activeIframeUrl} 
+                      className="absolute inset-0 w-full h-full border-none z-10" 
+                      sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                      title="Internal Web Viewer"
+                    ></iframe>
+                  </div>
+                </div>
+              )}
             </div>
           );
         }
