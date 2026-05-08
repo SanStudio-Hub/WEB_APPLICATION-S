@@ -149,9 +149,9 @@
             { id: 3, title: 'Buy Groceries', completed: false, priority: 'low' },
           ],
           bills: [
-            { id: 1, name: 'Electricity Bill', amount: 1250, dueDate: '2026-05-01', paid: false },
-            { id: 2, name: 'Mobile Recharge (Jio)', amount: 749, dueDate: '2026-04-30', paid: false },
-            { id: 3, name: 'Internet (Airtel)', amount: 999, dueDate: '2026-05-15', paid: true },
+            { id: 1, name: 'Electricity Bill', amount: 1250, dueDate: '2026-06-01', cycle: '1 Month', paid: false },
+            { id: 2, name: 'Mobile Recharge (Jio)', amount: 749, dueDate: '2026-05-15', cycle: '28 Days', paid: false },
+            { id: 3, name: 'Internet (Airtel)', amount: 999, dueDate: '2026-06-15', cycle: '1 Month', paid: false },
           ],
           identity: [
             { id: 1, type: 'Aadhaar', number: '123456789012', name: 'Santhosh A' },
@@ -165,14 +165,20 @@
             { id: 1, name: 'Netflix', cost: 199, cycle: 'Monthly' },
             { id: 2, name: 'GitHub Copilot', cost: 850, cycle: 'Monthly' },
           ],
-          education: [{ id: 1, degree: 'B.Tech Computer Science', institution: 'Anna University', year: '2024' }],
+          education: [{ id: 1, degree: 'B.Tech Computer Science', institution: 'Anna University', year: '2024', mark: '8.5 CGPA', project: 'LifeOS Digital Dashboard', note: 'First Class with Distinction' }],
           travel: [{ id: 1, destination: 'New York', date: '2026-06-15', type: 'Flight' }],
           calls: [{ id: 1, name: 'Santhosh (Client)', number: '+91 9876543210', completed: false }],
-          shopping: [{ id: 1, item: 'Wireless Mouse', completed: false }],
+          shopping: [{ id: 1, item: 'Wireless Mouse', cost: 1500, budget: 2000, completed: false }],
           documents: [{ id: 1, name: 'Passport', expiry: '2030-01-01' }],
           links: [
             { id: 1, title: 'GitHub Daily Commit', url: 'https://github.com', priority: 'high', completed: false },
             { id: 2, title: 'University Portal', url: 'https://example.com', priority: 'normal', completed: true }
+          ],
+          quickLinks: [
+            { id: 1, name: 'YouTube', url: 'https://youtube.com' },
+            { id: 2, name: 'Google', url: 'https://google.com' },
+            { id: 3, name: 'GitHub', url: 'https://github.com' },
+            { id: 4, name: 'ChatGPT', url: 'https://chatgpt.com' }
           ]
         };
 
@@ -215,6 +221,10 @@
           const [isSidebarOpen, setIsSidebarOpen] = useState(false);
           const [isDarkMode, setIsDarkMode] = useLocalStorage('lifeos_theme', true);
           const [isPrivacyMode, setIsPrivacyMode] = useState(false);
+          
+          // NEW SECURITY STATE (Edit vs Read-Only)
+          const [isEditMode, setIsEditMode] = useLocalStorage('lifeos_edit_mode', false);
+
           const [userName, setUserName] = useLocalStorage('lifeos_username', 'Santhosh');
           const [appData, setAppData] = useLocalStorage('lifeos_user_data', INITIAL_DATA);
           const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -322,6 +332,23 @@
 
             const [newTask, setNewTask] = useState('');
             const [editTaskId, setEditTaskId] = useState(null);
+
+            // Quick Links State
+            const [isAddingQuickLink, setIsAddingQuickLink] = useState(false);
+            const [quickLinkData, setQuickLinkData] = useState({ name: '', url: '' });
+
+            const handleAddQuickLink = () => {
+              if(!quickLinkData.name || !quickLinkData.url) return;
+              let finalUrl = quickLinkData.url.startsWith('http') ? quickLinkData.url : `https://${quickLinkData.url}`;
+              const newObj = { id: Date.now(), name: quickLinkData.name, url: finalUrl };
+              setAppData({...appData, quickLinks: [...(appData.quickLinks || []), newObj]});
+              setIsAddingQuickLink(false);
+              setQuickLinkData({name:'', url:''});
+            };
+
+            const removeQuickLink = (id) => {
+              setAppData({...appData, quickLinks: (appData.quickLinks || []).filter(l => l.id !== id)});
+            };
 
             // --- NEWS TICKER LOGIC (Tamil Nadu Live Feed) ---
             const [newsList, setNewsList] = useState([]);
@@ -485,21 +512,26 @@
                       <Check className="w-5 h-5 text-emerald-400" /> OBJECTIVES
                     </h3>
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-2 mb-4">
-                     <GtaInput className="w-full" value={newTask} onChange={e=>setNewTask(e.target.value)} onKeyPress={e=>e.key==='Enter'&&addTask()} placeholder="NEW OBJECTIVE..." />
-                     <div className="flex gap-2 w-full sm:w-auto">
-                        {editTaskId && (
-                           <GtaButton variant="secondary" onClick={() => {setEditTaskId(null); setNewTask('');}} className="flex-1 sm:flex-none px-3"><X className="w-4 h-4"/></GtaButton>
-                        )}
-                        <GtaButton onClick={addTask} className="flex-1 sm:flex-none px-4">
-                           {editTaskId ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4"/>}
-                        </GtaButton>
-                     </div>
-                  </div>
+                  
+                  {isEditMode && (
+                    <div className="flex flex-col sm:flex-row gap-2 mb-4">
+                       <GtaInput className="w-full" value={newTask} onChange={e=>setNewTask(e.target.value)} onKeyPress={e=>e.key==='Enter'&&addTask()} placeholder="NEW OBJECTIVE..." />
+                       <div className="flex gap-2 w-full sm:w-auto">
+                          {editTaskId && (
+                             <GtaButton variant="secondary" onClick={() => {setEditTaskId(null); setNewTask('');}} className="flex-1 sm:flex-none px-3"><X className="w-4 h-4"/></GtaButton>
+                          )}
+                          <GtaButton onClick={addTask} className="flex-1 sm:flex-none px-4">
+                             {editTaskId ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4"/>}
+                          </GtaButton>
+                       </div>
+                    </div>
+                  )}
+
                   <div className="space-y-2 flex-1 overflow-y-auto pr-2 custom-scrollbar">
                     {(appData.tasks || []).map(task => (
                       <div key={task.id} className="flex items-center justify-between p-3 bg-black/40 border border-white/5 rounded-lg hover:border-gta-cyan/30 transition-colors group">
                         <div className="flex items-center gap-3">
+                          {/* Checkbox always active regardless of EditMode */}
                           <button 
                             className={`w-5 h-5 shrink-0 rounded border flex items-center justify-center transition-colors ${task.completed ? 'bg-gta-cyan border-gta-cyan text-black shadow-[0_0_10px_rgba(0,240,255,0.4)]' : 'border-white/20'}`}
                             onClick={() => {
@@ -515,11 +547,69 @@
                         </div>
                         <div className="flex items-center gap-2">
                           {task.priority === 'high' && <span className="w-2 h-2 rounded-full bg-gta-pink shadow-[0_0_8px_#ff00b3] mr-2"></span>}
-                          <button onClick={() => triggerEdit(task)} className="p-1.5 md:p-0 opacity-100 md:opacity-0 group-hover:opacity-100 text-gta-cyan hover:text-white transition-opacity"><Pencil className="w-4 h-4"/></button>
-                          <button onClick={() => setAppData({...appData, tasks: (appData.tasks||[]).filter(t=>t.id!==task.id)})} className="p-1.5 md:p-0 opacity-100 md:opacity-0 group-hover:opacity-100 text-gta-pink hover:text-white transition-opacity"><Trash2 className="w-4 h-4"/></button>
+                          
+                          {/* Edit/Delete only in Edit Mode */}
+                          {isEditMode && (
+                            <>
+                              <button onClick={() => triggerEdit(task)} className="p-1.5 md:p-0 opacity-100 md:opacity-0 group-hover:opacity-100 text-gta-cyan hover:text-white transition-opacity"><Pencil className="w-4 h-4"/></button>
+                              <button onClick={() => setAppData({...appData, tasks: (appData.tasks||[]).filter(t=>t.id!==task.id)})} className="p-1.5 md:p-0 opacity-100 md:opacity-0 group-hover:opacity-100 text-gta-pink hover:text-white transition-opacity"><Trash2 className="w-4 h-4"/></button>
+                            </>
+                          )}
                         </div>
                       </div>
                     ))}
+                    {(appData.tasks || []).length === 0 && <p className="text-gray-500 py-2 text-sm font-bold tracking-wider">NO OBJECTIVES FOUND. {isEditMode ? '' : 'ENABLE ADMIN MODE TO ADD.'}</p>}
+                  </div>
+                </WidgetCard>
+
+                {/* --- QUICK ACCESS DOCK (App Icons) --- */}
+                <WidgetCard colSpan={4} className="flex flex-col overflow-visible">
+                  <div className="flex justify-between items-center mb-6">
+                     <h3 className="text-lg font-gta font-bold italic tracking-wider flex items-center gap-2">
+                      <LinkIcon className="w-5 h-5 text-gta-cyan" /> QUICK ACCESS DOCK
+                    </h3>
+                  </div>
+
+                  {isEditMode && isAddingQuickLink && (
+                     <div className="flex flex-col sm:flex-row gap-3 mb-6 animate-fade-in bg-black/40 p-4 rounded-xl border border-white/10 shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)]">
+                       <GtaInput placeholder="SITE NAME (e.g., Netflix)" value={quickLinkData.name} onChange={e=>setQuickLinkData({...quickLinkData, name: e.target.value})} className="flex-1" />
+                       <GtaInput placeholder="URL (e.g., netflix.com)" value={quickLinkData.url} onChange={e=>setQuickLinkData({...quickLinkData, url: e.target.value})} className="flex-1" />
+                       <div className="flex gap-2">
+                          <GtaButton onClick={handleAddQuickLink} className="flex-1 sm:flex-none px-6"><Check className="w-4 h-4"/> ADD</GtaButton>
+                          <GtaButton variant="secondary" onClick={()=>setIsAddingQuickLink(false)} className="flex-1 sm:flex-none px-4"><X className="w-4 h-4"/></GtaButton>
+                       </div>
+                     </div>
+                  )}
+
+                  <div className="flex gap-4 md:gap-8 overflow-x-auto custom-scrollbar pb-6 pt-2 px-2 items-start">
+                     {(appData.quickLinks || []).map(link => {
+                        let domain = 'example.com';
+                        try { domain = new URL(link.url).hostname; } catch(e) {}
+                        
+                        return (
+                          <div key={link.id} className="relative group flex flex-col items-center gap-3 shrink-0 w-[72px] md:w-20">
+                             {isEditMode && (
+                               <button onClick={() => removeQuickLink(link.id)} className="absolute -top-2 -right-2 z-20 p-1.5 bg-red-500/90 text-white rounded-full opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]">
+                                  <X className="w-3 h-3" />
+                               </button>
+                             )}
+                             <a href={link.url} target="_blank" rel="noopener noreferrer" className="w-[72px] h-[72px] md:w-20 md:h-20 rounded-[1.25rem] bg-black/80 border border-white/10 flex items-center justify-center hover:border-gta-cyan hover:shadow-[0_0_20px_rgba(0,240,255,0.4)] transition-all overflow-hidden relative group-hover:-translate-y-2 shadow-[0_8px_15px_rgba(0,0,0,0.5)]">
+                                {/* Auto-fetches the actual Logo of the website using Google's S2 API */}
+                                <img src={`https://www.google.com/s2/favicons?domain=${domain}&sz=128`} alt={link.name} className="w-9 h-9 md:w-11 md:h-11 drop-shadow-lg object-contain" />
+                             </a>
+                             <span className="text-[9px] md:text-[10px] font-bold text-gray-400 group-hover:text-white uppercase tracking-widest text-center w-full truncate transition-colors">{link.name}</span>
+                          </div>
+                        );
+                     })}
+                     
+                     {isEditMode && (
+                       <div className="flex flex-col items-center gap-3 shrink-0 w-[72px] md:w-20 group">
+                          <button onClick={() => setIsAddingQuickLink(true)} className="w-[72px] h-[72px] md:w-20 md:h-20 rounded-[1.25rem] bg-white/5 border border-white/10 border-dashed flex items-center justify-center hover:border-gta-pink hover:bg-gta-pink/10 text-gray-500 hover:text-gta-pink transition-all group-hover:-translate-y-2 shadow-[0_8px_15px_rgba(0,0,0,0.5)] hover:shadow-[0_0_20px_rgba(255,0,179,0.3)]">
+                             <Plus className="w-8 h-8" />
+                          </button>
+                          <span className="text-[9px] md:text-[10px] font-bold text-gray-500 group-hover:text-gta-pink uppercase tracking-widest text-center transition-colors">ADD SITE</span>
+                       </div>
+                     )}
                   </div>
                 </WidgetCard>
               </div>
@@ -534,11 +624,20 @@
             
             const handleAdd = () => {
               if(!formData[fields[0].key]) return;
+
+              const payload = { ...formData };
+              fields.forEach(f => {
+                if (f.type === 'select' && !payload[f.key]) {
+                   payload[f.key] = f.options[0].value;
+                }
+              });
+
               if (editId) {
-                setAppData({...appData, [dataKey]: items.map(i => i.id === editId ? {...i, ...formData} : i)});
+                setAppData({...appData, [dataKey]: items.map(i => i.id === editId ? {...i, ...payload} : i)});
                 setEditId(null);
               } else {
-                const newObj = { id: Date.now(), ...formData };
+                const newObj = { id: Date.now(), ...payload };
+                if (dataKey === 'bills' && !newObj.hasOwnProperty('paid')) newObj.paid = false;
                 setAppData({...appData, [dataKey]: [newObj, ...items]});
               }
               setFormData({});
@@ -556,32 +655,46 @@
               <div className="space-y-6 animate-fade-in">
                 <h2 className="text-3xl font-gta font-black italic tracking-tighter drop-shadow-[0_2px_10px_rgba(255,255,255,0.1)]">{title}</h2>
                 <WidgetCard>
-                  <div className="flex flex-col lg:flex-row gap-3 mb-8 p-4 bg-black/40 border border-white/5 rounded-xl">
-                    <div className="flex flex-col sm:flex-row gap-3 w-full">
-                       {fields.map(f => (
-                         <GtaInput key={f.key} type={f.type||'text'} value={formData[f.key]||''} onChange={e=>setFormData({...formData, [f.key]: e.target.value})} placeholder={f.placeholder} className="w-full" />
-                       ))}
+                  
+                  {isEditMode && (
+                    <div className="flex flex-col lg:flex-row gap-3 mb-8 p-4 bg-black/40 border border-white/5 rounded-xl">
+                      <div className="flex flex-wrap gap-3 w-full">
+                         {fields.map(f => {
+                           if (f.type === 'select') {
+                             return (
+                               <select key={f.key} value={formData[f.key]||f.options[0].value} onChange={e=>setFormData({...formData, [f.key]: e.target.value})} className="flex-auto min-w-[150px] lg:min-w-[200px] bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-gta-cyan text-xs font-bold uppercase tracking-wider shadow-[inset_0_2px_4px_rgba(0,0,0,0.6)]">
+                                 {f.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                               </select>
+                             )
+                           }
+                           return <GtaInput key={f.key} type={f.type||'text'} value={formData[f.key]||''} onChange={e=>setFormData({...formData, [f.key]: e.target.value})} placeholder={f.placeholder} className="flex-auto min-w-[150px] lg:min-w-[200px]" />
+                         })}
+                      </div>
+                      <div className="flex gap-2 w-full lg:w-auto mt-2 lg:mt-0">
+                         <GtaButton onClick={handleAdd} className="flex-1 lg:flex-none lg:px-8">
+                           {editId ? <><Check className="w-5 h-5"/> UPDATE</> : <><Plus className="w-5 h-5"/> ADD</>}
+                         </GtaButton>
+                         {editId && (
+                            <GtaButton variant="secondary" onClick={() => {setEditId(null); setFormData({});}} className="flex-1 lg:flex-none">CANCEL</GtaButton>
+                         )}
+                      </div>
                     </div>
-                    <div className="flex gap-2 w-full lg:w-auto mt-2 lg:mt-0">
-                       <GtaButton onClick={handleAdd} className="flex-1 lg:flex-none lg:px-8">
-                         {editId ? <><Check className="w-5 h-5"/> UPDATE</> : <><Plus className="w-5 h-5"/> ADD</>}
-                       </GtaButton>
-                       {editId && (
-                          <GtaButton variant="secondary" onClick={() => {setEditId(null); setFormData({});}} className="flex-1 lg:flex-none">CANCEL</GtaButton>
-                       )}
-                    </div>
-                  </div>
+                  )}
+
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                     {items.map(item => (
                       <div key={item.id} className="relative group h-full">
                          {renderCard(item)}
-                         <div className="absolute top-3 right-3 flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                            <button onClick={() => handleEdit(item)} className="p-2.5 md:p-2 bg-black/80 border border-gta-cyan/30 text-gta-cyan hover:bg-gta-cyan hover:text-black rounded transition-colors shadow-lg"><Pencil className="w-4 h-4"/></button>
-                            <button onClick={() => remove(item.id)} className="p-2.5 md:p-2 bg-black/80 border border-gta-pink/30 text-gta-pink hover:bg-gta-pink hover:text-white rounded transition-colors shadow-lg"><Trash2 className="w-4 h-4"/></button>
-                         </div>
+                         
+                         {isEditMode && (
+                           <div className="absolute top-3 right-3 flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                              <button onClick={() => handleEdit(item)} className="p-2.5 md:p-2 bg-black/80 border border-gta-cyan/30 text-gta-cyan hover:bg-gta-cyan hover:text-black rounded transition-colors shadow-lg"><Pencil className="w-4 h-4"/></button>
+                              <button onClick={() => remove(item.id)} className="p-2.5 md:p-2 bg-black/80 border border-gta-pink/30 text-gta-pink hover:bg-gta-pink hover:text-white rounded transition-colors shadow-lg"><Trash2 className="w-4 h-4"/></button>
+                           </div>
+                         )}
                       </div>
                     ))}
-                    {items.length === 0 && <p className="text-gray-500 py-4 col-span-full font-bold tracking-wider text-sm">NO DATA FOUND IN DATABASE.</p>}
+                    {items.length === 0 && <p className="text-gray-500 py-4 col-span-full font-bold tracking-wider text-sm">NO DATA FOUND. {isEditMode ? '' : 'ENABLE ADMIN MODE IN SYS SETTINGS TO ADD.'}</p>}
                   </div>
                 </WidgetCard>
               </div>
@@ -611,9 +724,35 @@
           }
 
           const FinanceView = () => {
+             const calculateNextDate = (currentDateStr, cycle) => {
+                let date = currentDateStr ? new Date(currentDateStr) : new Date();
+                if (isNaN(date.getTime())) date = new Date(); // Safety fallback
+                
+                // Set hours to noon to prevent timezone date shifting
+                date.setHours(12, 0, 0, 0);
+
+                if (cycle === '28 Days') date.setDate(date.getDate() + 28);
+                else if (cycle === '1 Month') date.setMonth(date.getMonth() + 1);
+                else if (cycle === '3 Months') date.setMonth(date.getMonth() + 3);
+                else if (cycle === '1 Year') date.setFullYear(date.getFullYear() + 1);
+                
+                return date.toISOString().split('T')[0];
+             };
+
              return <GenericListView 
               title="FINANCIAL LEDGER" dataKey="bills"
-              fields={[{key:'name', placeholder:'BILLING ENTITY'}, {key:'amount', type:'number', placeholder:'AMOUNT'}, {key:'dueDate', type:'date', placeholder:'DUE DATE'}]}
+              fields={[
+                {key:'name', placeholder:'BILLING ENTITY'}, 
+                {key:'amount', type:'number', placeholder:'AMOUNT (₹)'}, 
+                {key:'dueDate', type:'date', placeholder:'DUE DATE'},
+                {key:'cycle', type:'select', options: [
+                  {value: 'None', label: 'ONE-TIME'},
+                  {value: '28 Days', label: '28 DAYS (MOBILE)'},
+                  {value: '1 Month', label: 'MONTHLY'},
+                  {value: '3 Months', label: 'QUARTERLY'},
+                  {value: '1 Year', label: 'YEARLY'}
+                ]}
+              ]}
               renderCard={(item) => {
                 const dueStatus = checkDueStatus(item.dueDate);
                 return (
@@ -638,21 +777,49 @@
                       <p className="text-2xl font-gta font-black italic text-gta-pink drop-shadow-[0_0_8px_rgba(255,0,179,0.4)] mt-1">
                         {maskText(item.amount, 'amount')}
                       </p>
+                      {item.cycle && item.cycle !== 'None' && (
+                        <p className="text-[9px] text-gta-cyan font-bold tracking-widest uppercase mt-2 border border-gta-cyan/30 bg-gta-cyan/10 px-2 py-0.5 rounded inline-block shadow-[0_0_5px_rgba(0,240,255,0.2)]">
+                          CYCLE: {item.cycle}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 mt-4 font-bold tracking-wider uppercase">
                         DUE: {new Date(item.dueDate).toLocaleDateString()}
                       </p>
+                      {/* Mark Cleared button remains visible regardless of Edit Mode so users can clear bills! */}
                       {!item.paid && (
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            const newBills = (appData.bills||[]).map(b => b.id === item.id ? {...b, paid: true} : b);
+                            let newBills;
+                            if (item.cycle && item.cycle !== 'None') {
+                              // Auto-renew: Calculate next due date and keep it unpaid
+                              const nextDate = calculateNextDate(item.dueDate, item.cycle);
+                              newBills = (appData.bills||[]).map(b => b.id === item.id ? {...b, dueDate: nextDate, paid: false} : b);
+                            } else {
+                              // One-time bill: Just mark as paid
+                              newBills = (appData.bills||[]).map(b => b.id === item.id ? {...b, paid: true} : b);
+                            }
                             setAppData({...appData, bills: newBills});
+                            
+                            // Visual feedback so the user instantly knows it worked
+                            const btn = e.currentTarget;
+                            const originalText = btn.innerText;
+                            btn.innerText = item.cycle && item.cycle !== 'None' ? "EXTENDED!" : "CLEARED!";
+                            btn.style.backgroundColor = "#34d399";
+                            btn.style.color = "#000";
+                            setTimeout(() => {
+                               if (btn) {
+                                 btn.innerText = originalText;
+                                 btn.style.backgroundColor = "";
+                                 btn.style.color = "";
+                               }
+                            }, 1000);
                           }}
-                          className="mt-4 w-full py-3 md:py-2 bg-white/5 border border-white/10 text-white rounded font-bold hover:bg-emerald-500 hover:border-emerald-400 hover:text-black transition-colors text-xs tracking-widest uppercase shadow-[0_0_10px_rgba(0,0,0,0.5)]"
+                          className={`mt-4 w-full py-3 md:py-2 border text-white rounded font-bold transition-all duration-300 text-xs tracking-widest uppercase shadow-[0_0_10px_rgba(0,0,0,0.5)] ${item.cycle && item.cycle !== 'None' ? 'bg-gta-purple/20 border-gta-purple/50 hover:bg-gta-purple hover:text-white hover:shadow-[0_0_15px_rgba(112,0,255,0.6)]' : 'bg-white/5 border-white/10 hover:bg-emerald-500 hover:border-emerald-400 hover:text-black'}`}
                         >
-                          MARK AS CLEARED
+                          {item.cycle && item.cycle !== 'None' ? 'RECHARGE & EXTEND' : 'MARK AS CLEARED'}
                         </button>
                       )}
                     </div>
@@ -667,6 +834,29 @@
               <h2 className="text-3xl font-gta font-black italic tracking-tighter drop-shadow-[0_2px_10px_rgba(255,255,255,0.1)]">SYSTEM SETTINGS</h2>
               <WidgetCard>
                 <div className="space-y-4">
+                  
+                  {/* --- NEW EDIT/DEFAULT MODE TOGGLE --- */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-black/40 border border-white/5 rounded-xl gap-4 shadow-[inset_0_2px_10px_rgba(0,0,0,0.4)]">
+                    <div>
+                      <p className="font-bold text-white tracking-wide flex items-center gap-2">
+                        SYSTEM ACCESS LEVEL
+                        {isEditMode && <span className="w-2 h-2 rounded-full bg-gta-pink animate-pulse shadow-[0_0_8px_#ff00b3]"></span>}
+                      </p>
+                      <p className="text-xs text-gray-500 uppercase font-semibold mt-1">Unlock Edit, Add, & Delete capabilities</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-xs font-bold ${isEditMode ? 'text-gta-pink' : 'text-gray-500'}`}>
+                        {isEditMode ? 'ADMIN (EDIT MODE)' : 'DEFAULT (READ-ONLY)'}
+                      </span>
+                      <button 
+                        onClick={() => setIsEditMode(!isEditMode)}
+                        className={`w-16 h-8 shrink-0 rounded-full p-1 transition-colors border shadow-[inset_0_2px_4px_rgba(0,0,0,0.6)] ${isEditMode ? 'bg-gta-pink border-gta-pink' : 'bg-gray-600 border-gray-600'}`}
+                      >
+                        <div className={`w-6 h-6 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)] transform transition-transform ${isEditMode ? 'translate-x-8' : 'translate-x-0'}`}></div>
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-black/40 border border-white/5 rounded-xl gap-4">
                     <div>
                       <p className="font-bold text-white tracking-wide">USER ALIAS</p>
@@ -677,6 +867,7 @@
                       value={userName} 
                       onChange={(e) => setUserName(e.target.value)}
                       className="w-full sm:max-w-[200px]"
+                      disabled={!isEditMode}
                     />
                   </div>
 
@@ -708,23 +899,25 @@
                         downloadAnchorNode.click();
                         downloadAnchorNode.remove();
                       }} className="flex-1 sm:flex-none !p-3 justify-center"><Download className="w-5 h-5 text-gta-cyan" /></GtaButton>
-                      <GtaButton variant="secondary" className="flex-1 sm:flex-none !p-3 justify-center"><Upload className="w-5 h-5 text-gta-pink" /></GtaButton>
+                      <GtaButton disabled={!isEditMode} variant="secondary" className={`flex-1 sm:flex-none !p-3 justify-center ${!isEditMode && 'opacity-50 cursor-not-allowed'}`}><Upload className="w-5 h-5 text-gta-pink" /></GtaButton>
                     </div>
                   </div>
 
-                  <div className="pt-6 mt-6 border-t border-white/10">
-                    <GtaButton 
-                      variant="danger"
-                      onClick={() => {
-                        if(window.confirm('WARNING: Erasing all local database entries. Confirm?')) {
-                          setAppData(INITIAL_DATA);
-                        }
-                      }}
-                      className="w-full !py-4 text-lg"
-                    >
-                      <Trash2 className="w-5 h-5" /> WIPE DATABASE
-                    </GtaButton>
-                  </div>
+                  {isEditMode && (
+                    <div className="pt-6 mt-6 border-t border-white/10">
+                      <GtaButton 
+                        variant="danger"
+                        onClick={() => {
+                          if(window.confirm('WARNING: Erasing all local database entries. Confirm?')) {
+                            setAppData(INITIAL_DATA);
+                          }
+                        }}
+                        className="w-full !py-4 text-lg"
+                      >
+                        <Trash2 className="w-5 h-5" /> WIPE DATABASE
+                      </GtaButton>
+                    </div>
+                  )}
                 </div>
               </WidgetCard>
             </div>
@@ -738,17 +931,83 @@
              </div>
           )} />;
 
-          const ShoppingView = () => <GenericListView title="INVENTORY REQ" dataKey="shopping" fields={[{key:'item', placeholder:'ITEM DESCRIPTION'}]} renderCard={(item) => (
-             <div className="p-5 h-full bg-black/60 border border-white/10 rounded-xl flex items-center gap-3 group-hover:border-gta-pink/40 transition-colors">
-                 <div className="w-2 h-8 bg-gta-pink rounded-full shadow-[0_0_8px_#ff00b3]"></div>
-                 <h3 className="font-bold text-gray-200 uppercase tracking-wide pr-14">{item.item}</h3>
-             </div>
-          )} />;
+          const ShoppingView = () => <GenericListView title="INVENTORY REQ" dataKey="shopping" fields={[{key:'item', placeholder:'ITEM DESCRIPTION'}, {key:'cost', type:'number', placeholder:'EST. COST (₹)'}, {key:'budget', type:'number', placeholder:'AVAILABLE FUNDS (₹)'}]} renderCard={(item) => {
+             const cost = Number(item.cost) || 0;
+             const budget = Number(item.budget) || 0;
+             const shortfall = cost - budget;
+             const isFunded = budget >= cost;
+             const percent = cost > 0 ? Math.min((budget / cost) * 100, 100) : (budget > 0 ? 100 : 0);
 
-          const EducationView = () => <GenericListView title="ACADEMIC LOGS" dataKey="education" fields={[{key:'degree', placeholder:'CERTIFICATION'}, {key:'institution', placeholder:'INSTITUTION'}, {key:'year', placeholder:'YEAR'}]} renderCard={(item) => (
+             return (
+               <div className="p-5 h-full bg-black/60 border border-white/10 rounded-xl flex flex-col justify-between group-hover:border-gta-pink/40 transition-colors">
+                   <div>
+                      <div className="flex justify-between items-start mb-3">
+                         <ShoppingCart className="text-gta-pink w-6 h-6"/>
+                         <span className={`px-2 py-1 border text-[10px] font-black italic rounded tracking-widest uppercase shadow-sm ${isFunded ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-red-500/10 text-red-400 border-red-500/30'}`}>
+                           {isFunded ? 'FUNDS SECURED' : `SHORTFALL: ${isPrivacyMode ? maskText(shortfall, 'amount') : `₹${shortfall}`}`}
+                         </span>
+                      </div>
+                      <h3 className="font-bold text-lg text-white uppercase tracking-wide leading-tight pr-8">{item.item}</h3>
+                      
+                      <div className="mt-4 grid grid-cols-2 gap-2 border-t border-white/10 pt-3">
+                        <div>
+                          <p className="text-[9px] text-gray-500 font-bold tracking-widest uppercase mb-1">EST. COST</p>
+                          <p className="text-gta-cyan font-mono text-sm drop-shadow-[0_0_5px_rgba(0,240,255,0.4)]">
+                            {isPrivacyMode ? maskText(cost, 'amount') : `₹${cost}`}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] text-gray-500 font-bold tracking-widest uppercase mb-1">AVAILABLE</p>
+                          <p className="text-gta-pink font-mono text-sm drop-shadow-[0_0_5px_rgba(255,0,179,0.4)]">
+                            {isPrivacyMode ? maskText(budget, 'amount') : `₹${budget}`}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-5">
+                         <div className="flex justify-between text-[10px] font-black italic mb-1">
+                           <span className="text-gray-400">ACQUISITION STATUS</span>
+                           <span className={isFunded ? 'text-emerald-400' : 'text-red-400'}>{Math.round(percent)}% FUNDED</span>
+                         </div>
+                         <div className="w-full bg-black border border-white/10 rounded-full h-1.5 overflow-hidden">
+                           <div className={`h-full transition-all duration-1000 ${isFunded ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : 'bg-red-500 shadow-[0_0_8px_#ef4444]'}`} style={{ width: `${percent}%` }}></div>
+                         </div>
+                      </div>
+                   </div>
+               </div>
+             );
+          }} />;
+
+          const EducationView = () => <GenericListView title="ACADEMIC LOGS" dataKey="education" fields={[{key:'degree', placeholder:'CERTIFICATION'}, {key:'institution', placeholder:'INSTITUTION'}, {key:'year', placeholder:'YEAR'}, {key:'mark', placeholder:'MARK / CGPA'}, {key:'project', placeholder:'PROJECT NAME'}, {key:'note', placeholder:'NOTES / REMARKS'}]} renderCard={(item) => (
              <div className="p-5 h-full bg-black/60 border border-white/10 rounded-xl flex flex-col justify-between group-hover:border-gta-purple/40 transition-colors">
-                 <div><GraduationCap className="text-gta-purple w-6 h-6 mb-3"/><h3 className="font-bold text-lg text-white uppercase tracking-wide leading-tight pr-14">{item.degree}</h3></div>
-                 <div className="mt-4 border-t border-white/10 pt-3"><p className="text-gta-cyan font-semibold text-sm uppercase">{item.institution}</p><p className="text-xs text-gray-500 font-bold mt-1">CLASS OF {item.year}</p></div>
+                 <div>
+                    <div className="flex justify-between items-start mb-3">
+                       <GraduationCap className="text-gta-purple w-6 h-6"/>
+                       {item.mark && <span className="px-2 py-1 bg-gta-cyan/10 text-gta-cyan border border-gta-cyan/30 text-[10px] font-black italic rounded tracking-widest uppercase shadow-[0_0_8px_rgba(0,240,255,0.2)]">{item.mark}</span>}
+                    </div>
+                    <h3 className="font-bold text-lg text-white uppercase tracking-wide leading-tight pr-8">{item.degree}</h3>
+                    <p className="text-gta-cyan font-semibold text-sm uppercase mt-1">{item.institution}</p>
+                    
+                    {(item.project || item.note) && (
+                      <div className="mt-4 space-y-2">
+                        {item.project && (
+                          <div className="bg-white/5 border border-white/10 p-2.5 rounded-lg">
+                            <p className="text-[9px] text-gray-500 font-bold tracking-widest uppercase mb-1">MAJOR PROJECT</p>
+                            <p className="text-xs text-gray-200 font-medium leading-relaxed">{item.project}</p>
+                          </div>
+                        )}
+                        {item.note && (
+                          <div className="bg-white/5 border border-white/10 p-2.5 rounded-lg">
+                            <p className="text-[9px] text-gray-500 font-bold tracking-widest uppercase mb-1">REMARKS / NOTES</p>
+                            <p className="text-xs text-gray-300 italic leading-relaxed">{item.note}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                 </div>
+                 <div className="mt-4 border-t border-white/10 pt-3 flex justify-between items-center">
+                    <p className="text-xs text-gray-500 font-bold tracking-widest uppercase">CLASS OF {item.year}</p>
+                 </div>
              </div>
           )} />;
 
@@ -908,30 +1167,32 @@
               <div className="space-y-6 animate-fade-in">
                 <h2 className="text-3xl font-gta font-black italic tracking-tighter drop-shadow-[0_2px_10px_rgba(255,255,255,0.1)]">ACTIVE COMMLINKS</h2>
                 
-                <WidgetCard className="mb-6">
-                  <div className="flex flex-col lg:flex-row gap-3">
-                    <GtaInput value={newLink.title} onChange={e=>setNewLink({...newLink, title: e.target.value})} placeholder="TASK / ACTIVITY NAME (e.g., GitHub PRs)" className="flex-1" />
-                    <GtaInput value={newLink.url} onChange={e=>setNewLink({...newLink, url: e.target.value})} placeholder="URL (e.g., github.com)" className="flex-1" />
-                    
-                    <select 
-                      value={newLink.priority} 
-                      onChange={e=>setNewLink({...newLink, priority: e.target.value})} 
-                      className="bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-gta-cyan font-bold text-xs uppercase tracking-wider"
-                    >
-                      <option value="normal">NORMAL PRIORITY</option>
-                      <option value="high">MUST DO (HIGH)</option>
-                    </select>
+                {isEditMode && (
+                  <WidgetCard className="mb-6">
+                    <div className="flex flex-col lg:flex-row gap-3">
+                      <GtaInput value={newLink.title} onChange={e=>setNewLink({...newLink, title: e.target.value})} placeholder="TASK / ACTIVITY NAME (e.g., GitHub PRs)" className="flex-1" />
+                      <GtaInput value={newLink.url} onChange={e=>setNewLink({...newLink, url: e.target.value})} placeholder="URL (e.g., github.com)" className="flex-1" />
+                      
+                      <select 
+                        value={newLink.priority} 
+                        onChange={e=>setNewLink({...newLink, priority: e.target.value})} 
+                        className="bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white outline-none focus:border-gta-cyan font-bold text-xs uppercase tracking-wider"
+                      >
+                        <option value="normal">NORMAL PRIORITY</option>
+                        <option value="high">MUST DO (HIGH)</option>
+                      </select>
 
-                    <div className="flex gap-2">
-                       <GtaButton onClick={addLink} className="flex-1 lg:flex-none">
-                         {editId ? <><Check className="w-5 h-5"/> UPDATE</> : <><Plus className="w-5 h-5"/> ADD</>}
-                       </GtaButton>
-                       {editId && (
-                          <GtaButton variant="secondary" onClick={() => {setEditId(null); setNewLink({ title: '', url: '', priority: 'normal' });}}>CANCEL</GtaButton>
-                       )}
+                      <div className="flex gap-2">
+                         <GtaButton onClick={addLink} className="flex-1 lg:flex-none">
+                           {editId ? <><Check className="w-5 h-5"/> UPDATE</> : <><Plus className="w-5 h-5"/> ADD</>}
+                         </GtaButton>
+                         {editId && (
+                            <GtaButton variant="secondary" onClick={() => {setEditId(null); setNewLink({ title: '', url: '', priority: 'normal' });}}>CANCEL</GtaButton>
+                         )}
+                      </div>
                     </div>
-                  </div>
-                </WidgetCard>
+                  </WidgetCard>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {(appData.links || []).map(item => {
@@ -963,10 +1224,12 @@
                             </div>
                           </div>
                           
-                          <div className="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => triggerEdit(item)} className="text-gta-cyan hover:text-white transition-colors"><Pencil className="w-4 h-4"/></button>
-                            <button onClick={() => remove(item.id)} className="text-gta-pink hover:text-white transition-colors"><Trash2 className="w-4 h-4"/></button>
-                          </div>
+                          {isEditMode && (
+                            <div className="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => triggerEdit(item)} className="text-gta-cyan hover:text-white transition-colors"><Pencil className="w-4 h-4"/></button>
+                              <button onClick={() => remove(item.id)} className="text-gta-pink hover:text-white transition-colors"><Trash2 className="w-4 h-4"/></button>
+                            </div>
+                          )}
                         </div>
 
                         <button 
@@ -978,7 +1241,7 @@
                       </div>
                     )
                   })}
-                  {(appData.links || []).length === 0 && <p className="text-gray-500 py-4 col-span-full font-bold tracking-wider text-sm">NO COMMLINKS ASSIGNED.</p>}
+                  {(appData.links || []).length === 0 && <p className="text-gray-500 py-4 col-span-full font-bold tracking-wider text-sm">NO COMMLINKS ASSIGNED. {isEditMode ? '' : 'ENABLE ADMIN MODE TO ADD.'}</p>}
                 </div>
               </div>
             );
@@ -1070,6 +1333,12 @@
                   </div>
 
                   <div className="flex items-center gap-3 md:gap-5">
+                    
+                    {/* Access Level Status Tag */}
+                    <div className={`hidden md:flex items-center gap-2 px-3 py-2 rounded border text-xs font-black italic tracking-widest transition-all shadow-lg ${isEditMode ? 'bg-gta-pink/10 border-gta-pink text-gta-pink shadow-[0_0_10px_rgba(255,0,179,0.2)]' : 'bg-black/50 border-white/10 text-gray-400'}`}>
+                      {isEditMode ? 'ADMIN MODE' : 'READ ONLY'}
+                    </div>
+
                     <button onClick={() => setIsPrivacyMode(!isPrivacyMode)} className={`hidden md:flex items-center gap-2 px-3 py-2 rounded border text-xs font-black italic tracking-widest transition-all shadow-lg ${isPrivacyMode ? 'bg-gta-cyan/10 border-gta-cyan text-gta-cyan shadow-[0_0_10px_rgba(0,240,255,0.2)]' : 'bg-black/50 border-white/10 text-gray-400 hover:text-white'}`}>
                       {isPrivacyMode ? <Shield className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       {isPrivacyMode ? 'GHOST MODE' : 'PUBLIC'}
@@ -1085,10 +1354,8 @@
 
                       {isNotificationsOpen && (
                         <>
-                          {/* Invisible overlay to detect clicks outside the dropdown */}
                           <div className="fixed inset-0 cursor-default" onClick={() => setIsNotificationsOpen(false)}></div>
                           
-                          {/* Dropdown Panel */}
                           <div className="absolute right-0 mt-3 w-72 md:w-80 bg-[#0a0a0c]/95 backdrop-blur-3xl border border-white/10 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-50 overflow-hidden animate-fade-in origin-top-right">
                             <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
                               <h3 className="font-gta font-bold italic tracking-widest text-white text-sm">SYSTEM ALERTS</h3>
